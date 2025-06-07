@@ -1,0 +1,26 @@
+# Ignore node_modules — it will be reinstalled in EAS build
+node_modules/
+
+# Ignore version control and system folders
+.git/
+.cache/
+.expo/
+.next/
+.config/
+.local/
+.mozilla/
+.thunderbird/
+.npm/
+.vscode/
+Desktop/
+Documents/
+Downloads/
+Pictures/
+Videos/
+*.log
+*.zip
+*.tar.gz
+*.apk
+*.aab
+.env
+.DS_Store
