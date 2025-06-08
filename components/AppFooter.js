@@ -11,7 +11,7 @@ export default function AppFooter() {
         <Text style={styles.label}>Home</Text>
       </TouchableOpacity>
 
-      <TouchableOpacity onPress={() => router.push("/batches")} style={styles.navItem}>
+      <TouchableOpacity onPress={() => router.push("/batches/home")} style={styles.navItem}>
         <Image source={require("../assets/images/icon.png")} style={styles.icon} />
         <Text style={styles.label}>Batches</Text>
       </TouchableOpacity>

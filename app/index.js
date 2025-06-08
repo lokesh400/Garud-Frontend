@@ -1,6 +1,6 @@
 import { useRouter } from "expo-router";
 import { useEffect, useState } from "react";
-import { Text, View } from "react-native";
+import { Text, View, Image, StyleSheet } from "react-native";
 import { apiFetch } from "../utils/api";
 
 export default function Home() {
@@ -22,8 +22,31 @@ export default function Home() {
   }, []);
 
   return (
-    <View style={{ flex: 1, justifyContent: "center", alignItems: "center" }}>
-      {loading ? <Text>Checking session...</Text> : null}
+    <View style={styles.container}>
+      <Image 
+        source={require('../assets/images/icon.png')}
+        style={styles.backgroundImage}
+        resizeMode="cover"
+      >
+      </Image>
     </View>
   );
 }
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    backgroundColor:"#ffff",
+  },
+  backgroundImage: {
+    width: 300,
+    height: 300,
+    position: "absolute",
+    top: "50%",                  
+    left: "50%",                  
+    transform: [
+      { translateX: -150 }, 
+      { translateY: -150 },   
+    ],
+  },
+});

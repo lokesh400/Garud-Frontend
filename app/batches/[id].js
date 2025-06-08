@@ -8,9 +8,11 @@ import {
   Text,
   TouchableOpacity,
   View,
+  SafeAreaView,
+  StatusBar,
+  Platform
 } from "react-native";
 import { apiFetch } from "../../utils/api";
-
 import { useRouter } from "expo-router";
 
 export default function BatchDetails() {
@@ -44,169 +46,235 @@ export default function BatchDetails() {
     }
   };
 
-  if (loading) return <ActivityIndicator style={{ marginTop: 50 }} />;
+  if (loading) {
+    return (
+      <View style={styles.loadingContainer}>
+        <ActivityIndicator size="large" />
+      </View>
+    );
+  }
 
   return (
     <View style={styles.container}>
-      <Text style={styles.header}>{batch.title}</Text>
+      <StatusBar barStyle="dark-content" />
+      <SafeAreaView style={styles.safeArea}>
+        {/* Custom Header */}
+        <View style={styles.header}>
+          <Text style={styles.headerTitle}>{batch.title}</Text>
+        </View>
 
-      {/* Navigation buttons */}
-      <View style={styles.nav}>
-        <TouchableOpacity
-          style={[
-            styles.tabButton,
-            activeTab === "announcements" && styles.activeTab,
-          ]}
-          onPress={() => {
-            setActiveTab("announcements");
-            fetchAnnouncements();
-          }}
-        >
-          <Text
+        {/* Tab Navigation */}
+        <View style={styles.tabContainer}>
+          <TouchableOpacity
             style={[
-              styles.tabText,
-              activeTab === "announcements" && styles.activeTabText,
+              styles.tabButton,
+              activeTab === "tests" && styles.activeTabButton,
             ]}
+            onPress={() => setActiveTab("tests")}
           >
-            Announcements
-          </Text>
-        </TouchableOpacity>
+            <Text
+              style={[
+                styles.tabText,
+                activeTab === "tests" && styles.activeTabText,
+              ]}
+            >
+              Tests
+            </Text>
+          </TouchableOpacity>
 
-        <TouchableOpacity
-          style={[
-            styles.tabButton,
-            activeTab === "tests" && styles.activeTab,
-          ]}
-          onPress={() => setActiveTab("tests")}
-        >
-          <Text
+          <TouchableOpacity
             style={[
-              styles.tabText,
-              activeTab === "tests" && styles.activeTabText,
+              styles.tabButton,
+              activeTab === "announcements" && styles.activeTabButton,
             ]}
+            onPress={() => {
+              setActiveTab("announcements");
+              fetchAnnouncements();
+            }}
           >
-            Show Tests
-          </Text>
-        </TouchableOpacity>
-      </View>
+            <Text
+              style={[
+                styles.tabText,
+                activeTab === "announcements" && styles.activeTabText,
+              ]}
+            >
+              Announcements
+            </Text>
+          </TouchableOpacity>
+        </View>
 
-      {/* Content */}
-      {activeTab === "announcements" ? (
-        <FlatList
-          data={announcements}
-          keyExtractor={(item, index) => index.toString()}
-          renderItem={({ item }) => (
-            <Text style={styles.announcementItem}>• {item}</Text>
-          )}
-          ListEmptyComponent={<Text>No announcements available.</Text>}
-          style={{ marginTop: 12 }}
-        />
-      ) : (
-        <FlatList
-          data={batch.tests}
-          keyExtractor={(item) => item.id}
-          renderItem={({ item }) => (
-            <View style={styles.testCard}>
-              <Text style={styles.testTitle}>{item.title}</Text>
-
-              <View style={styles.buttonsRow}>
-                <TouchableOpacity
-                  style={styles.primaryButton}
-                  onPress={() => {
-                    router.push(`/test/${item.id}`);
-                  }}
-                >
-                  <Text style={styles.buttonText}>Attempt Test</Text>
-                </TouchableOpacity>
-
-                <TouchableOpacity
-                  style={styles.secondaryButton}
-                  onPress={() => {
-                    router.push(`/test/report/${item.id}`);
-                  }}
-                >
-                  <Text style={styles.buttonText}>Show Result</Text>
-                </TouchableOpacity>
+        {/* Content Area */}
+        <View style={styles.contentContainer}>
+          {activeTab === "announcements" ? (
+            announcements.length > 0 ? (
+              <FlatList
+                data={announcements}
+                keyExtractor={(item, index) => index.toString()}
+                renderItem={({ item }) => (
+                  <View style={styles.announcementCard}>
+                    <Text style={styles.announcementText}>• {item}</Text>
+                  </View>
+                )}
+              />
+            ) : (
+              <View style={styles.emptyState}>
+                <Text style={styles.emptyStateText}>No announcements available</Text>
               </View>
+            )
+          ) : batch.tests && batch.tests.length > 0 ? (
+            <FlatList
+              data={batch.tests}
+              keyExtractor={(item) => item.id}
+              contentContainerStyle={styles.testList}
+              renderItem={({ item }) => (
+                <View style={styles.testCard}>
+                  <Text style={styles.testTitle}>{item.title}</Text>
+                  <View style={styles.buttonContainer}>
+                    <TouchableOpacity
+                      style={styles.secondaryButton}
+                      onPress={() => router.push(`/test/report/${item.id}`)}
+                    >
+                      <Text style={styles.buttonText}>View Result</Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity
+                      style={styles.primaryButton}
+                      onPress={() => router.push(`/test/${item.id}`)}
+                    >
+                      <Text style={styles.buttonText}>Attempt Test</Text>
+                    </TouchableOpacity>
+                  </View>
+                </View>
+              )}
+            />
+          ) : (
+            <View style={styles.emptyState}>
+              <Text style={styles.emptyStateText}>No tests available</Text>
             </View>
           )}
-          ListEmptyComponent={<Text>No tests available.</Text>}
-          style={{ marginTop: 12 }}
-        />
-      )}
+        </View>
+      </SafeAreaView>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, padding: 16, backgroundColor: "#fff" },
-  header: { fontSize: 24, fontWeight: "bold", marginBottom: 12, color: "#222" },
-  nav: { flexDirection: "row", justifyContent: "space-around", marginBottom: 12 },
+  container: {
+    flex: 1,
+    backgroundColor: '#f8f9fa',
+  },
+  safeArea: {
+    flex: 1,
+  },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: '#f8f9fa',
+  },
+  header: {
+    paddingHorizontal: 16,
+    paddingTop: Platform.OS === 'android' ? StatusBar.currentHeight : 0,
+    paddingBottom: 16,
+    backgroundColor: '#ffffff',
+    borderBottomWidth: 1,
+    borderBottomColor: '#e0e0e0',
+  },
+  headerTitle: {
+    fontSize: 22,
+    fontWeight: 'bold',
+    color: '#333',
+  },
+  tabContainer: {
+    flexDirection: 'row',
+    justifyContent: 'space-around',
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    backgroundColor: '#ffffff',
+    borderBottomWidth: 1,
+    borderBottomColor: '#f0f0f0',
+  },
   tabButton: {
-    paddingVertical: 10,
-    paddingHorizontal: 20,
-    backgroundColor: "#e0e0e0",
+    paddingVertical: 8,
+    paddingHorizontal: 16,
     borderRadius: 20,
   },
-  activeTab: {
-    backgroundColor: "#007AFF",
+  activeTabButton: {
+    backgroundColor: '#6b28ad',
   },
   tabText: {
-    color: "#444",
-    fontWeight: "bold",
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#666',
   },
   activeTabText: {
-    color: "#fff",
+    color: '#ffffff',
   },
-  announcementItem: {
-    fontSize: 16,
-    marginVertical: 6,
-    color: "#444",
+  contentContainer: {
+    flex: 1,
+    padding: 16,
+  },
+  testList: {
+    paddingBottom: 16,
   },
   testCard: {
-    backgroundColor: "#fff",
-    padding: 16,
+    backgroundColor: '#ffffff',
     borderRadius: 12,
-    marginBottom: 14,
-    // Shadow for iOS
-    shadowColor: "#000",
+    padding: 16,
+    marginBottom: 12,
+    shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
-    shadowRadius: 5,
-    // Elevation for Android
+    shadowRadius: 6,
     elevation: 3,
   },
   testTitle: {
-    fontSize: 20,
-    fontWeight: "600",
+    fontSize: 18,
+    fontWeight: '600',
+    color: '#333',
     marginBottom: 12,
-    color: "#111",
   },
-  buttonsRow: {
-    flexDirection: "row",
-    justifyContent: "space-between",
+  announcementCard: {
+    backgroundColor: '#ffffff',
+    borderRadius: 12,
+    padding: 16,
+    marginBottom: 12,
+  },
+  announcementText: {
+    fontSize: 16,
+    color: '#444',
+    lineHeight: 24,
+  },
+  buttonContainer: {
+    flexDirection: 'row',
+    justifyContent: 'flex-end',
+    gap: 12,
   },
   primaryButton: {
-    backgroundColor: "#007AFF",
+    backgroundColor: '#6b28ad',
     paddingVertical: 12,
-    paddingHorizontal: 20,
-    borderRadius: 10,
-    flex: 1,
-    marginRight: 10,
-    alignItems: "center",
+    paddingHorizontal: 24,
+    borderRadius: 8,
+    alignItems: 'center',
   },
   secondaryButton: {
-    backgroundColor: "#aaa",
+    backgroundColor: '#e0d6eb',
     paddingVertical: 12,
-    paddingHorizontal: 20,
-    borderRadius: 10,
-    flex: 1,
-    marginLeft: 10,
-    alignItems: "center",
+    paddingHorizontal: 24,
+    borderRadius: 8,
+    alignItems: 'center',
   },
   buttonText: {
-    color: "#fff",
-    fontWeight: "600",
+    color: '#ffffff',
+    fontWeight: '600',
+    fontSize: 15,
+  },
+  emptyState: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  emptyStateText: {
     fontSize: 16,
+    color: '#666',
   },
 });

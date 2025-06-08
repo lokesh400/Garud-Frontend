@@ -148,17 +148,20 @@ export default function TestAttemptScreen() {
   const question = test.questions[currentQIndex];
 
   return (
-    <ScrollView style={{ backgroundColor: "#fff", padding: 20 }}>
-      <Text style={{ fontSize: 20, fontWeight: "bold", marginBottom: 10 }}>
+    <>
+      <View style = {{ marginTop:30, padding:10 }} >
+        <Text style={{ fontSize: 20, fontWeight: "bold", marginBottom: 10 }}>
         {test.title}
       </Text>
 
       <Text style={{ marginBottom: 10 }}>
         Time Left: {Math.floor(timeLeft / 60)}:{(timeLeft % 60).toString().padStart(2, "0")}
       </Text>
+      </View>
 
+    <ScrollView style={{ backgroundColor: "#ffff", padding: 20, marginBottom:20 }}>
       {/* Question Stats */}
-      <View style={{ flexDirection: "row", justifyContent: "space-between", marginBottom: 16 }}>
+      <View style={{ flexDirection: "row", justifyContent: "space-around", marginBottom: 16 }}>
         <Text style={{ fontSize: 16 }}>Total: {test.questions.length}</Text>
         <Text style={{ fontSize: 16 }}>Attempted: {Object.keys(answer).length}</Text>
         <Text style={{ fontSize: 16 }}>
@@ -183,11 +186,11 @@ export default function TestAttemptScreen() {
                 backgroundColor: isCurrent
                   ? "#007bff"
                   : isAttempted
-                  ? "rgba(135, 206, 235, 0.5)" // Transparent sky blue
+                  ? "rgba(135, 207, 235, 0.3)" // Transparent sky blue
                   : "#eee",
                 paddingHorizontal: 14,
                 paddingVertical: 10,
-                borderRadius: 20,
+                borderRadius: 5,
                 marginRight: 8,
                 borderWidth: isCurrent ? 2 : 0,
                 borderColor: isCurrent ? "#0056b3" : "transparent",
@@ -321,5 +324,6 @@ export default function TestAttemptScreen() {
         </TouchableOpacity>
       </View>
     </ScrollView>
+    </>
   );
 }

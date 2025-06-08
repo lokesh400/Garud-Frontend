@@ -1,4 +1,4 @@
-// export const API_BASE = "http://192.168.240.198:4000"; // ← Replace with your LAN IP!
+// export const API_BASE = "http://192.168.240.198:4000"; /
 
 export const API_BASE = "https://thetestpulse.com";
 

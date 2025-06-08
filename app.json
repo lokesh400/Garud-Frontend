@@ -42,8 +42,9 @@
     "extra": {
       "router": {},
       "eas": {
-        "projectId": "frontend-teaching-app"
+        "projectId": "7b54d2e6-45a1-4a78-9b84-97a6820ce87d"
       }
-    }
+    },
+    "owner": "lokesh400"
   }
 }

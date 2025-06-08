@@ -1,5 +1,5 @@
 import { useRouter } from "expo-router";
-import React, { useState } from "react";
+import React, { useState,useEffect } from "react";
 import {
   Animated,
   Dimensions,
@@ -11,6 +11,7 @@ import {
   TouchableOpacity,
   View,
   ImageBackground,
+  StatusBar,
   Platform,
   KeyboardAvoidingView
 } from "react-native";
@@ -19,19 +20,24 @@ import * as Haptics from 'expo-haptics';
 import AppFooter from "../components/AppFooter";
 import { Logout } from '../components/Logout';
 
+import { apiFetch } from "../utils/api";
+
+import { ActivityIndicator } from 'react-native';
+import BatchCarousel from '../components/BatchCarousel';
+
 const quickActions = [
   { label: "All Batches", icon: "layers", bgColor: "#6366f1", route: "/batches/home" },
-  { label: "Recent Learning", icon: "history", bgColor: "#10b981", route: "/recent" },
-  { label: "My Doubts", icon: "help-circle", bgColor: "#f59e0b", route: "/doubts" },
-  { label: "My Downloads", icon: "download", bgColor: "#3b82f6", route: "/downloads" },
+  { label: "Recent Learning", icon: "history", bgColor: "#10b981", route: "/" },
+  { label: "My Doubts", icon: "help-circle", bgColor: "#f59e0b", route: "/" },
+  { label: "My Downloads", icon: "download", bgColor: "#3b82f6", route: "/" },
 ];
 
 const sidebarLinks = [
   { label: "Dashboard", icon: "home", route: "/" },
   { label: "Batches", icon: "layers", route: "/batches/home" },
-  { label: "Classes", icon: "video", route: "/classes" },
+  { label: "Classes", icon: "video", route: "/" },
   { label: "Profile", icon: "user", route: "/profile" },
-  { label: "Settings", icon: "settings", route: "/settings" },
+  { label: "Settings", icon: "settings", route: "/" },
 ];
 
 const screenWidth = Dimensions.get("window").width;
@@ -40,6 +46,26 @@ export default function Dashboard() {
   const router = useRouter();
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const sidebarAnim = React.useRef(new Animated.Value(-screenWidth * 0.75)).current;
+
+  // const [featuredBatches, setFeaturedBatches] = useState([]);
+  // const [loading, setLoading] = useState(true);
+
+  // useEffect(() => {
+  //   const fetchFeaturedBatches = async () => {
+  //     try {
+  //       const response = await apiFetch('/api/batches/trending');
+  //       const data = await response.json();
+  //       setFeaturedBatches(data);
+  //     } catch (error) {
+  //       console.error('Error fetching featured batches:', error);
+  //     } finally {
+  //       setLoading(false);
+  //     }
+  //   };
+
+  //   fetchFeaturedBatches();
+  // }, []);
+
 
   const handleLogoutSuccess = () => {
     router.replace('/login');
@@ -70,10 +96,14 @@ export default function Dashboard() {
   };
 
   return (
-   <SafeAreaView
-    style={styles.container}
-         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-       >
+    <>
+      <View style={styles.container}>
+          <StatusBar barStyle="dark-content" />
+          
+          {/* Custom Header */}
+          <SafeAreaView style={styles.headerSafeArea}>
+            
+          </SafeAreaView>
       {/* Sidebar Overlay */}
       {sidebarOpen && (
         <Pressable style={styles.overlay} onPress={toggleSidebar} />
@@ -113,8 +143,7 @@ export default function Dashboard() {
         </View>
       </Animated.View>
 
-      <ScrollView style={styles.contentContainer}>
-        {/* Header */}
+      {/* Header */}
         <View style={styles.header}>
           <TouchableOpacity onPress={toggleSidebar} style={styles.hamburger}>
             <Feather name="menu" size={24} color="#1e293b" />
@@ -122,9 +151,17 @@ export default function Dashboard() {
           
           <View style={styles.headerContent}>
             <Text style={styles.title}>Garud Classes</Text>
-            <Text style={styles.subText}>Welcome back, Student!</Text>
           </View>
         </View>
+
+      <ScrollView style={styles.contentContainer}>
+
+        <ImageBackground 
+          source={require('../assets/images/banner.png')} // Add your own image
+          style={styles.continueCard}
+          imageStyle={styles.continueCardImage}
+        >
+        </ImageBackground>
 
         {/* Class Status Card */}
         <View style={styles.classBox}>
@@ -142,25 +179,6 @@ export default function Dashboard() {
           </TouchableOpacity>
         </View>
 
-        {/* Continue Watching */}
-        <ImageBackground 
-          source={require('../assets/images/banner.png')} // Add your own image
-          style={styles.continueCard}
-          imageStyle={styles.continueCardImage}
-        >
-          <View style={styles.continueContent}>
-            <Text style={styles.continueBadge}>CONTINUE LEARNING</Text>
-            <Text style={styles.continueTitle}>Diode Circuits 03: Models of Diode</Text>
-            <TouchableOpacity 
-              style={styles.continueButton}
-              onPress={() => router.push("/video/diode")}
-            >
-              <Text style={styles.continueButtonText}>Continue Watching</Text>
-              <Feather name="play" size={16} color="#fff" />
-            </TouchableOpacity>
-          </View>
-        </ImageBackground>
-
         {/* Quick Access */}
         <View style={styles.quickSection}>
           <Text style={styles.sectionTitle}>Quick Access</Text>
@@ -172,13 +190,17 @@ export default function Dashboard() {
                 onPress={() => router.push(action.route)}
               >
                 <View style={styles.quickIcon}>
-                  <Feather name={action.icon} size={24} color="#fff" />
+                  <Feather name={action.icon} size={24} color="#ffff" />
                 </View>
                 <Text style={styles.quickText}>{action.label}</Text>
               </TouchableOpacity>
             ))}
           </View>
         </View>
+
+        {/* <View style={{ flex: 1 }}>
+         <BatchCarousel batches={featuredBatches} />
+        </View> */}
 
         {/* Banner */}
         <View style={styles.banner}>
@@ -189,17 +211,22 @@ export default function Dashboard() {
             New Batch starting soon! Enroll now for early bird discounts.
           </Text>
         </View>
-      </ScrollView>
 
-      <AppFooter/>
-      </SafeAreaView>
+        <View style={{marginTop:10}} ></View>
+
+      </ScrollView>
+    </View>
+    <AppFooter/>
+    </>
   );
 }
 
 const styles = StyleSheet.create({
   container: { 
     flex: 1, 
-    backgroundColor: "#ffff" 
+    backgroundColor: "#ffff", 
+    paddingTop:20,
+    marginBottom:60,
   },
   contentContainer: {
     paddingBottom: 80
@@ -207,9 +234,10 @@ const styles = StyleSheet.create({
   header: {
     flexDirection: "row",
     alignItems: "center",
-    padding: 20,
-    paddingTop: 15,
-    backgroundColor: "#fff",
+    paddingLeft: 20,
+    paddingTop: 18,
+    paddingBottom:15,
+    backgroundColor: "#ffff",
     borderBottomWidth: 1,
     borderBottomColor: "#e2e8f0"
   },
@@ -270,13 +298,13 @@ const styles = StyleSheet.create({
   continueCard: {
     height: 180,
     marginHorizontal: 20,
+    marginTop:20,
     marginBottom: 20,
     borderRadius: 12,
     overflow: "hidden"
   },
   continueCardImage: {
     borderRadius: 12,
-    opacity: 0.9
   },
   continueContent: {
     flex: 1,
