@@ -1,7 +1,7 @@
 {
   "expo": {
     "name": "Garud-Classes",
-    "slug": "Garud-Classes",
+    "slug": "frontend-teaching-app",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
@@ -42,7 +42,7 @@
     "extra": {
       "router": {},
       "eas": {
-        "projectId": "7b54d2e6-45a1-4a78-9b84-97a6820ce87d"
+        "projectId": "frontend-teaching-app"
       }
     }
   }
