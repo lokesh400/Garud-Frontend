@@ -33,21 +33,35 @@ export default function Batches() {
       contentContainerStyle={{ padding: 16 }}
       renderItem={({ item }) => (
         <View style={styles.card}>
+          <Text>
+            {item.title}
+          </Text>
           <Image
             source={{ uri: item.thumbnail }}
             style={styles.image}
             resizeMode="cover"
           />
           <View style={styles.info}>
-            <Text style={styles.title}>{item.title}</Text>
+            <Text style={styles.subText}>Starts on: {item.startingDate}</Text>
             <Text style={styles.subText}>Class: {item.class}</Text>
+          </View>
+
+           <View style={styles.buttonDiv}>
             <TouchableOpacity
-              style={styles.button}
+              style={styles.button2}
+              onPress={() => router.push(`/batches/${item._id}`)}
+            >
+              <Text style={styles.buttonText}>Explore</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={styles.button1}
               onPress={() => router.push(`/batches/${item._id}`)}
             >
               <Text style={styles.buttonText}>Buy</Text>
             </TouchableOpacity>
-          </View>
+           </View>
+
         </View>
       )}
     />
@@ -64,13 +78,26 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.1,
     shadowRadius: 6,
     elevation: 4,
+    paddingTop:10,
+    paddingBottom:10
   },
   image: {
-    width: "100%",
+    width: "90%",
+    margin:"auto",
     height: 180,
+    borderRadius:20
   },
   info: {
-    padding: 12,
+    display:"flex",
+    flexDirection:"row",
+    justifyContent:"space-around",
+  },
+  buttonDiv: {
+    display:"flex",
+    flexDirection:"row",
+    justifyContent:"space-around",
+    width:"90%",
+    margin:"auto"
   },
   title: {
     fontSize: 20,
@@ -81,12 +108,19 @@ const styles = StyleSheet.create({
     color: "#666",
     marginVertical: 6,
   },
-  button: {
-    marginTop: 8,
-    backgroundColor: "#007AFF",
+  button1: {
+    backgroundColor: "#6b28ad",
     paddingVertical: 10,
     borderRadius: 6,
     alignItems: "center",
+    width:"49%",
+  },
+  button2: {
+    backgroundColor: "#bfb5c9",
+    paddingVertical: 10,
+    borderRadius: 6,
+    alignItems: "center",
+    width:"49%",
   },
   buttonText: {
     color: "#fff",

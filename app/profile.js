@@ -19,7 +19,7 @@ export default function ProfileScreen() {
   useEffect(() => {
     async function fetchUser() {
       try {
-        const response = await apiFetch("/api/user/profile"); // Change path to your actual user API endpoint
+        const response = await apiFetch("/api/user"); // Change path to your actual user API endpoint
         if (!response.ok) {
           throw new Error(`Server error: ${response.status}`);
         }

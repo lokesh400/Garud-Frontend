@@ -9,24 +9,29 @@ import {
   StyleSheet,
   Text,
   TouchableOpacity,
-  View
+  View,
+  ImageBackground,
+  Platform,
+  KeyboardAvoidingView
 } from "react-native";
-
-import AppFooter from "../components/AppFooter"; // Adjust the path as needed
+import { MaterialIcons, Ionicons, FontAwesome, Feather } from '@expo/vector-icons';
+import * as Haptics from 'expo-haptics';
+import AppFooter from "../components/AppFooter";
+import { Logout } from '../components/Logout';
 
 const quickActions = [
-  { label: "All Batches", bgColor: "#fde2e4", route: "/batches/home" },
-  { label: "Recent Learning", bgColor: "#e0e7ff", route: "/recent" },
-  { label: "My Doubts", bgColor: "#fff7ed", route: "/doubts" },
-  { label: "My Downloads", bgColor: "#f0f9ff", route: "/downloads" },
+  { label: "All Batches", icon: "layers", bgColor: "#6366f1", route: "/batches/home" },
+  { label: "Recent Learning", icon: "history", bgColor: "#10b981", route: "/recent" },
+  { label: "My Doubts", icon: "help-circle", bgColor: "#f59e0b", route: "/doubts" },
+  { label: "My Downloads", icon: "download", bgColor: "#3b82f6", route: "/downloads" },
 ];
 
 const sidebarLinks = [
-  { label: "Dashboard", route: "/" },
-  { label: "Batches", route: "/batches/home" },
-  { label: "Classes", route: "/classes" },
-  { label: "Profile", route: "/profile" },
-  { label: "Settings", route: "/settings" },
+  { label: "Dashboard", icon: "home", route: "/" },
+  { label: "Batches", icon: "layers", route: "/batches/home" },
+  { label: "Classes", icon: "video", route: "/classes" },
+  { label: "Profile", icon: "user", route: "/profile" },
+  { label: "Settings", icon: "settings", route: "/settings" },
 ];
 
 const screenWidth = Dimensions.get("window").width;
@@ -36,7 +41,12 @@ export default function Dashboard() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const sidebarAnim = React.useRef(new Animated.Value(-screenWidth * 0.75)).current;
 
+  const handleLogoutSuccess = () => {
+    router.replace('/login');
+  };
+
   const toggleSidebar = () => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     if (sidebarOpen) {
       Animated.timing(sidebarAnim, {
         toValue: -screenWidth * 0.75,
@@ -54,12 +64,16 @@ export default function Dashboard() {
   };
 
   const handleLinkPress = (route) => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     toggleSidebar();
     router.push(route);
   };
 
   return (
-    <SafeAreaView style={styles.container}>
+   <SafeAreaView
+    style={styles.container}
+         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+       >
       {/* Sidebar Overlay */}
       {sidebarOpen && (
         <Pressable style={styles.overlay} onPress={toggleSidebar} />
@@ -69,15 +83,17 @@ export default function Dashboard() {
       <Animated.View
         style={[styles.sidebar, { transform: [{ translateX: sidebarAnim }] }]}
       >
-
-        <View style={{ height:60,borderColor:'blue',borderWidth:1,borderRadius:5,alignContent:"center",alignItems:"center",justifyContent:"center" }}>
-           <Text>
-            <TouchableOpacity
+        <View style={styles.profileCard}>
+          <View style={styles.avatarPlaceholder}>
+            <Ionicons name="person" size={32} color="#6366f1" />
+          </View>
+          <TouchableOpacity
             onPress={() => handleLinkPress("/profile")}
-            style={styles.sidebarLink}
+            style={styles.profileLink}
           >
-             <Text style={styles.sidebarLinkText}>My Profile</Text>
-          </TouchableOpacity></Text>
+            <Text style={styles.profileLinkText}>View Profile</Text>
+            <Feather name="chevron-right" size={18} color="#6366f1" />
+          </TouchableOpacity>
         </View>
 
         <Text style={styles.sidebarTitle}>Menu</Text>
@@ -87,40 +103,63 @@ export default function Dashboard() {
             onPress={() => handleLinkPress(link.route)}
             style={styles.sidebarLink}
           >
-             <Text style={styles.sidebarLinkText}>{link.label}</Text>
+            <Ionicons name={link.icon} size={20} color="#64748b" />
+            <Text style={styles.sidebarLinkText}>{link.label}</Text>
           </TouchableOpacity>
         ))}
+
+        <View style={styles.logoutContainer}>
+          <Logout onSuccess={handleLogoutSuccess} />
+        </View>
       </Animated.View>
 
-      <ScrollView>
-
-        {/* Header with Hamburger */}
+      <ScrollView style={styles.contentContainer}>
+        {/* Header */}
         <View style={styles.header}>
           <TouchableOpacity onPress={toggleSidebar} style={styles.hamburger}>
-            <View style={styles.bar} />
-            <View style={styles.bar} />
-            <View style={styles.bar} />
+            <Feather name="menu" size={24} color="#1e293b" />
           </TouchableOpacity>
-
-          <View style={{ flex: 1 }}>
+          
+          <View style={styles.headerContent}>
             <Text style={styles.title}>Garud Classes</Text>
+            <Text style={styles.subText}>Welcome back, Student!</Text>
           </View>
-         </View>
+        </View>
 
+        {/* Class Status Card */}
         <View style={styles.classBox}>
-          <Text style={styles.noClass}>No Class scheduled!</Text>
-          <TouchableOpacity onPress={() => router.push("/classes")}>
-            <Text style={styles.link}>View All Classes →</Text>
+          <View style={styles.classHeader}>
+            <Ionicons name="time-outline" size={20} color="#64748b" />
+            <Text style={styles.classTitle}>Today's Class</Text>
+          </View>
+          <Text style={styles.noClass}>No class scheduled for today</Text>
+          <TouchableOpacity 
+            style={styles.linkButton}
+            onPress={() => router.push("/classes")}
+          >
+            <Text style={styles.linkButtonText}>View All Classes</Text>
+            <Feather name="chevron-right" size={16} color="#6366f1" />
           </TouchableOpacity>
         </View>
 
         {/* Continue Watching */}
-        <View style={styles.continueCard}>
-          <Text style={styles.continueTitle}>Diode Circuits 03: Models of Diode</Text>
-          <TouchableOpacity onPress={() => router.push("/video/diode")}>
-            <Text style={styles.continueLink}>Continue Watching →</Text>
-          </TouchableOpacity>
-        </View>
+        <ImageBackground 
+          source={require('../assets/images/banner.png')} // Add your own image
+          style={styles.continueCard}
+          imageStyle={styles.continueCardImage}
+        >
+          <View style={styles.continueContent}>
+            <Text style={styles.continueBadge}>CONTINUE LEARNING</Text>
+            <Text style={styles.continueTitle}>Diode Circuits 03: Models of Diode</Text>
+            <TouchableOpacity 
+              style={styles.continueButton}
+              onPress={() => router.push("/video/diode")}
+            >
+              <Text style={styles.continueButtonText}>Continue Watching</Text>
+              <Feather name="play" size={16} color="#fff" />
+            </TouchableOpacity>
+          </View>
+        </ImageBackground>
 
         {/* Quick Access */}
         <View style={styles.quickSection}>
@@ -132,6 +171,9 @@ export default function Dashboard() {
                 style={[styles.quickItem, { backgroundColor: action.bgColor }]}
                 onPress={() => router.push(action.route)}
               >
+                <View style={styles.quickIcon}>
+                  <Feather name={action.icon} size={24} color="#fff" />
+                </View>
                 <Text style={styles.quickText}>{action.label}</Text>
               </TouchableOpacity>
             ))}
@@ -140,154 +182,258 @@ export default function Dashboard() {
 
         {/* Banner */}
         <View style={styles.banner}>
+          <View style={styles.bannerIcon}>
+            <Ionicons name="megaphone" size={20} color="#92400e" />
+          </View>
           <Text style={styles.bannerText}>
-            📢 New Batch starting soon! Enroll now for early bird discounts.
+            New Batch starting soon! Enroll now for early bird discounts.
           </Text>
         </View>
       </ScrollView>
 
-      <View style={{ flex: 1, paddingBottom:30 }}>
-        <AppFooter/>
-      </View>
-    </SafeAreaView>
+      <AppFooter/>
+      </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: "#ffff" },
-
+  container: { 
+    flex: 1, 
+    backgroundColor: "#ffff" 
+  },
+  contentContainer: {
+    paddingBottom: 80
+  },
   header: {
     flexDirection: "row",
     alignItems: "center",
-    paddingHorizontal: 20,
-    paddingTop:30,
-    marginBottom:15,
+    padding: 20,
+    paddingTop: 15,
     backgroundColor: "#fff",
-    elevation: 3,
-    marginBottom: 8,
+    borderBottomWidth: 1,
+    borderBottomColor: "#e2e8f0"
   },
   hamburger: {
-    padding: 10,
-    marginRight: 10,
-    justifyContent: "center",
+    marginRight: 15
   },
-
-  bar: {
-    width: 20,
-    height: 2,
-    backgroundColor: "#333",
-    marginVertical: 3,
-    borderRadius: 2,
+  headerContent: {
+    flex: 1
   },
-
   title: {
     fontSize: 22,
     fontWeight: "700",
-    marginBottom: 2,
+    color: "#1e293b"
   },
   subText: {
-    fontSize: 16,
-    color: "#6b7280",
+    fontSize: 14,
+    color: "#64748b",
+    marginTop: 2
   },
   classBox: {
     backgroundColor: "#fff",
-    padding: 15,
-    borderRadius: 10,
-    elevation: 2,
-    marginHorizontal: 20,
-    marginBottom: 20,
+    padding: 20,
+    margin: 20,
+    borderRadius: 12,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 6,
+    elevation: 2
+  },
+  classHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginBottom: 10
+  },
+  classTitle: {
+    fontSize: 16,
+    fontWeight: "600",
+    color: "#1e293b",
+    marginLeft: 8
   },
   noClass: {
     fontSize: 15,
-    color: "#4b5563",
-    marginBottom: 8,
+    color: "#64748b",
+    marginBottom: 15
   },
-  link: {
+  linkButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    alignSelf: "flex-start"
+  },
+  linkButtonText: {
     fontSize: 14,
-    color: "#2563eb",
+    color: "#6366f1",
     fontWeight: "600",
+    marginRight: 4
   },
   continueCard: {
-    backgroundColor: "#fff7ed",
+    height: 180,
     marginHorizontal: 20,
-    padding: 15,
-    borderRadius: 10,
     marginBottom: 20,
+    borderRadius: 12,
+    overflow: "hidden"
+  },
+  continueCardImage: {
+    borderRadius: 12,
+    opacity: 0.9
+  },
+  continueContent: {
+    flex: 1,
+    padding: 20,
+    justifyContent: "flex-end",
+    backgroundColor: "rgba(0,0,0,0.4)"
+  },
+  continueBadge: {
+    color: "#fff",
+    fontSize: 12,
+    fontWeight: "700",
+    marginBottom: 8,
+    letterSpacing: 1
   },
   continueTitle: {
+    color: "#fff",
+    fontSize: 18,
     fontWeight: "600",
-    fontSize: 16,
-    marginBottom: 6,
+    marginBottom: 15
   },
-  continueLink: {
-    color: "#ef4444",
+  continueButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "#6366f1",
+    alignSelf: "flex-start",
+    paddingVertical: 8,
+    paddingHorizontal: 16,
+    borderRadius: 20
+  },
+  continueButtonText: {
+    color: "#fff",
+    fontSize: 14,
     fontWeight: "600",
+    marginRight: 8
   },
-  quickSection: { paddingHorizontal: 20, marginTop: 10 },
+  quickSection: { 
+    paddingHorizontal: 20,
+    marginBottom: 20
+  },
   sectionTitle: {
     fontSize: 18,
     fontWeight: "700",
-    marginBottom: 10,
+    color: "#1e293b",
+    marginBottom: 15
   },
   quickGrid: {
     flexDirection: "row",
     flexWrap: "wrap",
-    justifyContent: "space-between",
+    justifyContent: "space-between"
   },
   quickItem: {
     width: "48%",
-    padding: 20,
-    borderRadius: 10,
-    marginBottom: 10,
+    padding: 15,
+    borderRadius: 12,
+    marginBottom: 15,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 2
+  },
+  quickIcon: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: "rgba(255,255,255,0.2)",
+    justifyContent: "center",
+    alignItems: "center",
+    marginBottom: 10
   },
   quickText: {
     fontWeight: "600",
-    color: "#1f2937",
-    fontSize: 15,
+    color: "#fff",
+    fontSize: 15
   },
   banner: {
     backgroundColor: "#fef3c7",
     padding: 15,
     marginHorizontal: 20,
-    marginTop: 20,
-    borderRadius: 8,
+    borderRadius: 12,
+    flexDirection: "row",
+    alignItems: "center"
+  },
+  bannerIcon: {
+    marginRight: 10
   },
   bannerText: {
     color: "#92400e",
-    fontWeight: "600",
-    textAlign: "center",
+    fontWeight: "500",
+    flex: 1
   },
-
-  // Sidebar
+  // Sidebar styles
   sidebar: {
     position: "absolute",
     top: 0,
     left: 0,
     height: "100%",
-    width: screenWidth * 0.70,
-    backgroundColor: "#ffff",
-    paddingTop: 50,
+    width: screenWidth * 0.75,
+    backgroundColor: "#fff",
+    paddingTop: 60,
     paddingHorizontal: 20,
-    elevation: 8,
-    shadowColor: "#000",
-    shadowOffset: { width: 3, height: 0 },
-    shadowOpacity: 0.3,
-    shadowRadius: 5,
     zIndex: 1000,
+    borderRightWidth: 1,
+    borderRightColor: "#e2e8f0"
+  },
+  profileCard: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginBottom: 30,
+    paddingBottom: 20,
+    borderBottomWidth: 1,
+    borderBottomColor: "#e2e8f0"
+  },
+  avatarPlaceholder: {
+    width: 50,
+    height: 50,
+    borderRadius: 25,
+    backgroundColor: "#e0e7ff",
+    justifyContent: "center",
+    alignItems: "center",
+    marginRight: 15
+  },
+  profileLink: {
+    flexDirection: "row",
+    alignItems: "center"
+  },
+  profileLinkText: {
+    fontSize: 16,
+    color: "#6366f1",
+    fontWeight: "500",
+    marginRight: 5
   },
   sidebarTitle: {
-    fontSize: 24,
-    fontWeight: "700",
-    marginBottom: 20,
+    fontSize: 16,
+    fontWeight: "600",
+    color: "#64748b",
+    marginBottom: 15,
+    textTransform: "uppercase",
+    letterSpacing: 1
   },
   sidebarLink: {
-    paddingVertical: 15,
-    borderBottomColor: "#e5e7eb",
+    flexDirection: "row",
+    alignItems: "center",
+    paddingVertical: 12,
     borderBottomWidth: 1,
+    borderBottomColor: "#f1f5f9"
   },
   sidebarLinkText: {
-    fontSize: 18,
-    color: "#111",
+    fontSize: 16,
+    color: "#1e293b",
+    marginLeft: 15
+  },
+  logoutContainer: {
+    position: "absolute",
+    bottom: 40,
+    left: 20,
+    right: 20
   },
   overlay: {
     position: "absolute",
@@ -295,7 +441,7 @@ const styles = StyleSheet.create({
     left: 0,
     height: "100%",
     width: "100%",
-    backgroundColor: "rgba(0,0,0,0.3)",
-    zIndex: 999,
-  },
+    backgroundColor: "rgba(0,0,0,0.4)",
+    zIndex: 999
+  }
 });

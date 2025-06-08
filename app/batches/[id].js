@@ -122,8 +122,7 @@ export default function BatchDetails() {
                 <TouchableOpacity
                   style={styles.secondaryButton}
                   onPress={() => {
-                    // Show result logic here
-                    Alert.alert("Result", "Show result functionality coming soon.");
+                    router.push(`/test/report/${item.id}`);
                   }}
                 >
                   <Text style={styles.buttonText}>Show Result</Text>
