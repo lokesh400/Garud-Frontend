@@ -47,24 +47,27 @@ export default function Dashboard() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const sidebarAnim = React.useRef(new Animated.Value(-screenWidth * 0.75)).current;
 
-  // const [featuredBatches, setFeaturedBatches] = useState([]);
-  // const [loading, setLoading] = useState(true);
+  const [featuredBatches, setFeaturedBatches] = useState([]);
+  const [loadingbatch, setLoadingbatch] = useState(true);
 
-  // useEffect(() => {
-  //   const fetchFeaturedBatches = async () => {
-  //     try {
-  //       const response = await apiFetch('/api/batches/trending');
-  //       const data = await response.json();
-  //       setFeaturedBatches(data);
-  //     } catch (error) {
-  //       console.error('Error fetching featured batches:', error);
-  //     } finally {
-  //       setLoading(false);
-  //     }
-  //   };
+useEffect(() => {
+  const fetchFeaturedBatches = async () => {
+    try {
+      const response = await apiFetch('/api/batches/find/trending');
+      if (!response.ok) {
+        throw new Error('Failed to fetch featured batches');
+      }
+      const data = await response.json();
+      setFeaturedBatches(data);
+    } catch (error) {
+      console.error('Error fetching featured batches:', error);
+    } finally {
+      setLoadingbatch(false);
+    }
+  };
 
-  //   fetchFeaturedBatches();
-  // }, []);
+  fetchFeaturedBatches();
+}, []);
 
 
   const handleLogoutSuccess = () => {
@@ -198,9 +201,9 @@ export default function Dashboard() {
           </View>
         </View>
 
-        {/* <View style={{ flex: 1 }}>
+        <View style={{ flex: 1 }}>
          <BatchCarousel batches={featuredBatches} />
-        </View> */}
+        </View>
 
         {/* Banner */}
         <View style={styles.banner}>

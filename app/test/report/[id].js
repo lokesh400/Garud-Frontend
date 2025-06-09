@@ -148,7 +148,6 @@ export default function TestReportScreen() {
           return renderQuestionItem({
             ...answer,
             questionText: question?.text || 'Question not found',
-            options: question?.options || [],
             correctOption: question?.correctOption,
             explanation: question?.explanation
           }, index);

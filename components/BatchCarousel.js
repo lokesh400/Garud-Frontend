@@ -58,25 +58,42 @@ const BatchCarousel = ({ batches }) => {
           onPress={() => router.push(`/batches/${item._id}`)}
         >
           <Image
-            source={{ uri: item.thumbnail }}
+            source={{ uri: item.thumbnail}}
             style={styles.cardImage}
             resizeMode="cover"
-          />
+           />
           <LinearGradient
             colors={['transparent', 'rgba(0,0,0,0.8)']}
             style={styles.gradient}
           />
           <View style={styles.cardContent}>
             <Text style={styles.cardTitle} numberOfLines={1}>
-              {item.title}
+              {item.title || 'No Title'}
             </Text>
-            <Text style={styles.cardClass}>{item.class}</Text>
-            <Text style={styles.cardTests}>{item.tests.length} Tests</Text>
+            <Text style={styles.cardClass}>{item.class || 'No Class'}</Text>
           </View>
         </TouchableOpacity>
       </Animated.View>
     );
   };
+
+  // If no batches or empty array, show empty state
+  if (!batches || batches.length === 0) {
+    return (
+      <View style={styles.container}>
+        <View style={styles.emptyContainer}>
+          <Text style={styles.emptyText}>No featured batches available</Text>
+        </View>
+        <TouchableOpacity
+          style={styles.viewAllButton}
+          onPress={handleViewAll}
+        >
+          <Text style={styles.viewAllText}>View All Batches</Text>
+          <MaterialIcons name="chevron-right" size={24} color="#fff" />
+        </TouchableOpacity>
+      </View>
+    );
+  }
 
   return (
     <View style={styles.container}>
@@ -157,11 +174,6 @@ const styles = StyleSheet.create({
     fontSize: 14,
     marginBottom: 5,
   },
-  cardTests: {
-    color: '#fff',
-    fontSize: 14,
-    fontWeight: '600',
-  },
   viewAllButton: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -177,6 +189,21 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: 'bold',
     marginRight: 5,
+  },
+  emptyContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    height: 200,
+    padding: 20,
+    backgroundColor: '#f5f5f5',
+    borderRadius: 10,
+    marginHorizontal: 20,
+  },
+  emptyText: {
+    fontSize: 16,
+    color: '#666',
+    textAlign: 'center',
   },
 });
 

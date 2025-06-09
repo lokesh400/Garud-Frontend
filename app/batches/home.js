@@ -10,22 +10,42 @@ import {
   View,
   SafeAreaView,
   StatusBar,
-  Platform
+  Platform,
+  TextInput
 } from "react-native";
 import { apiFetch } from "../../utils/api";
+import { Ionicons } from '@expo/vector-icons';
+import AppFooter from "../../components/AppFooter"; // Import the footer component
 
 export default function Batches() {
   const [batches, setBatches] = useState([]);
+  const [filteredBatches, setFilteredBatches] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [searchQuery, setSearchQuery] = useState("");
   const router = useRouter();
 
   useEffect(() => {
     apiFetch("/api/batches")
       .then((res) => res.json())
-      .then(setBatches)
+      .then((data) => {
+        setBatches(data);
+        setFilteredBatches(data);
+      })
       .catch(console.error)
       .finally(() => setLoading(false));
   }, []);
+
+  useEffect(() => {
+    if (searchQuery.trim() === "") {
+      setFilteredBatches(batches);
+    } else {
+      const filtered = batches.filter(batch =>
+        batch.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        batch.class.toLowerCase().includes(searchQuery.toLowerCase())
+      );
+      setFilteredBatches(filtered);
+    }
+  }, [searchQuery, batches]);
 
   if (loading) {
     return (
@@ -43,12 +63,29 @@ export default function Batches() {
       <SafeAreaView style={styles.headerSafeArea}>
         <View style={styles.header}>
           <Text style={styles.headerTitle}>My Batches</Text>
+          
+          {/* Search Bar */}
+          <View style={styles.searchContainer}>
+            <Ionicons name="search" size={20} color="#999" style={styles.searchIcon} />
+            <TextInput
+              style={styles.searchInput}
+              placeholder="Search batches..."
+              placeholderTextColor="#999"
+              value={searchQuery}
+              onChangeText={setSearchQuery}
+            />
+            {searchQuery.length > 0 && (
+              <TouchableOpacity onPress={() => setSearchQuery("")} style={styles.clearButton}>
+                <Ionicons name="close-circle" size={20} color="#999" />
+              </TouchableOpacity>
+            )}
+          </View>
         </View>
       </SafeAreaView>
       
       {/* Content Area */}
       <FlatList
-        data={batches}
+        data={filteredBatches}
         keyExtractor={(item) => item._id}
         contentContainerStyle={styles.listContent}
         style={styles.list}
@@ -64,6 +101,7 @@ export default function Batches() {
               <Text style={styles.infoText}>Starts: {item.startingDate}</Text>
               <Text style={styles.infoText}>Class: {item.class}</Text>
             </View>
+            <View style={{borderColor:"black",borderWidth:0.4,marginBottom:20}} ></View>
             <View style={styles.buttonsContainer}>
               <TouchableOpacity
                 style={[styles.button, styles.secondaryButton]}
@@ -80,7 +118,15 @@ export default function Batches() {
             </View>
           </View>
         )}
+        ListEmptyComponent={
+          <View style={styles.emptyContainer}>
+            <Ionicons name="search-off" size={50} color="#ccc" />
+            <Text style={styles.emptyText}>No batches found</Text>
+          </View>
+        }
       />
+      
+      <AppFooter />
     </View>
   );
 }
@@ -89,6 +135,7 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#ffff',
+    paddingBottom: 60, // Add padding to prevent content from being hidden behind footer
   },
   headerSafeArea: {
     backgroundColor: '#ffffff',
@@ -104,6 +151,26 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     color: '#333',
     marginTop: Platform.OS === 'android' ? StatusBar.currentHeight : 0,
+  },
+  searchContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#f5f5f5',
+    borderRadius: 10,
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    marginTop: 15,
+  },
+  searchIcon: {
+    marginRight: 10,
+  },
+  searchInput: {
+    flex: 1,
+    fontSize: 14,
+    color: '#333',
+  },
+  clearButton: {
+    marginLeft: 10,
   },
   list: {
     flex: 1,
@@ -173,5 +240,16 @@ const styles = StyleSheet.create({
     color: '#fff',
     fontWeight: '600',
     fontSize: 15,
+  },
+  emptyContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingVertical: 50,
+  },
+  emptyText: {
+    fontSize: 18,
+    color: '#999',
+    marginTop: 10,
   },
 });

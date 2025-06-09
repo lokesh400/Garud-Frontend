@@ -68,14 +68,34 @@ export default function BatchDetails() {
           <TouchableOpacity
             style={[
               styles.tabButton,
-              activeTab === "tests" && styles.activeTabButton,
+              activeTab === "class" && styles.activeTabButton,
             ]}
-            onPress={() => setActiveTab("tests")}
+            onPress={() => setActiveTab("class")}
           >
             <Text
               style={[
                 styles.tabText,
-                activeTab === "tests" && styles.activeTabText,
+                activeTab === "class" && styles.activeTabText,
+              ]}
+            >
+              Class
+            </Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={[
+              styles.tabButton,
+              activeTab === "tests" && styles.activeTabButton,
+            ]}
+            onPress={() => {
+              setActiveTab("tests");
+              fetchAnnouncements();
+            }}
+          >
+            <Text
+              style={[
+                styles.tabText,
+                activeTab === "tsets" && styles.activeTabText,
               ]}
             >
               Tests
@@ -101,6 +121,7 @@ export default function BatchDetails() {
               Announcements
             </Text>
           </TouchableOpacity>
+
         </View>
 
         {/* Content Area */}
@@ -187,8 +208,8 @@ const styles = StyleSheet.create({
   tabContainer: {
     flexDirection: 'row',
     justifyContent: 'space-around',
-    paddingHorizontal: 16,
-    paddingVertical: 12,
+    // paddingHorizontal: 16,
+    // paddingVertical: 12,
     backgroundColor: '#ffffff',
     borderBottomWidth: 1,
     borderBottomColor: '#f0f0f0',
@@ -196,13 +217,13 @@ const styles = StyleSheet.create({
   tabButton: {
     paddingVertical: 8,
     paddingHorizontal: 16,
-    borderRadius: 20,
+    borderRadius: 0,
   },
   activeTabButton: {
     backgroundColor: '#6b28ad',
   },
   tabText: {
-    fontSize: 16,
+    fontSize: 10,
     fontWeight: '600',
     color: '#666',
   },
