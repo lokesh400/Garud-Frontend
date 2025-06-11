@@ -1,15 +1,25 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, ActivityIndicator } from 'react-native';
+import { 
+  View, 
+  Text, 
+  StyleSheet, 
+  ScrollView, 
+  TouchableOpacity, 
+  ActivityIndicator, 
+  Image, 
+  Dimensions 
+} from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { AntDesign, MaterialIcons } from '@expo/vector-icons';
 import { apiFetch } from '../../../utils/api';
 
 export default function TestReportScreen() {
-  const { id } = useLocalSearchParams();
   const router = useRouter();
+  const { id } = useLocalSearchParams();
   const [report, setReport] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [imageHeights, setImageHeights] = useState({});
 
   useEffect(() => {
     const fetchReport = async () => {
@@ -18,6 +28,8 @@ export default function TestReportScreen() {
         const data = await response.json();
         if (response.ok) {
           setReport(data);
+          // Pre-calculate image heights after report is loaded
+          calculateImageHeights(data.answers);
         } else {
           setError(data.error || 'Failed to load report');
         }
@@ -31,33 +43,34 @@ export default function TestReportScreen() {
     fetchReport();
   }, [id]);
 
-  if (loading) {
-    return (
-      <View style={styles.loadingContainer}>
-        <ActivityIndicator size="large" color="#6C63FF" />
-      </View>
-    );
-  }
-
-  if (error) {
-    return (
-      <View style={styles.errorContainer}>
-        <Text style={styles.errorText}>{error}</Text>
-        <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
-          <AntDesign name="arrowleft" size={24} color="#6C63FF" />
-          <Text style={styles.backText}>Go Back</Text>
-        </TouchableOpacity>
-      </View>
-    );
-  }
-
-  if (!report) {
-    return (
-      <View style={styles.errorContainer}>
-        <Text style={styles.errorText}>No report data available</Text>
-      </View>
-    );
-  }
+  const calculateImageHeights = (answers) => {
+    if (!answers) return;
+    
+    const screenWidth = Dimensions.get('window').width - 32; // Account for padding
+    
+    answers.forEach((answer, index) => {
+      if (answer.questionUrl) {
+        Image.getSize(
+          answer.questionUrl,
+          (width, height) => {
+            const aspectRatio = height / width;
+            const calculatedHeight = screenWidth * aspectRatio;
+            setImageHeights(prev => ({
+              ...prev,
+              [index]: calculatedHeight
+            }));
+          },
+          (error) => {
+            console.log(`Failed to get dimensions for image ${index}:`, error);
+            setImageHeights(prev => ({
+              ...prev,
+              [index]: 200 // Fallback height
+            }));
+          }
+        );
+      }
+    });
+  };
 
   const renderQuestionItem = (item, index) => {
     const isCorrect = item.isCorrect === "yes";
@@ -77,10 +90,21 @@ export default function TestReportScreen() {
           </View>
         </View>
         
-        <Text style={styles.questionText}>{item.questionText}</Text>
+        {item.questionUrl && (
+          <Image
+            source={{ uri: item.questionUrl }}
+            style={{
+              width: "100%",
+              height: imageHeights[index] || 200,
+              borderRadius: 6,
+              resizeMode: 'contain'
+            }}
+            onError={(e) => console.log(`Image ${index} failed to load`, e.nativeEvent.error)}
+          />
+        )}
         
         <View style={styles.optionsContainer}>
-          {item.options.map((option, i) => (
+          {item.options?.map((option, i) => (
             <View 
               key={i} 
               style={[
@@ -110,10 +134,37 @@ export default function TestReportScreen() {
     );
   };
 
+  if (loading) {
+    return (
+      <View style={styles.loadingContainer}>
+        <ActivityIndicator size="large" color="#6C63FF" />
+      </View>
+    );
+  }
+
+  if (error) {
+    return (
+      <View style={styles.errorContainer}>
+        <Text style={styles.errorText}>{error}</Text>
+        <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
+          <AntDesign name="arrowleft" size={24} color="#6C63FF" />
+          <Text style={styles.backText}>Go Back</Text>
+        </TouchableOpacity>
+      </View>
+    );
+  }
+
+  if (!report) {
+    return (
+      <View style={styles.errorContainer}>
+        <Text style={styles.errorText}>No report data available</Text>
+      </View>
+    );
+  }
+
   return (
     <View style={styles.container}>
       <ScrollView contentContainerStyle={styles.scrollContainer}>
-        {/* Test Summary */}
         <View style={styles.summaryCard}>
           <Text style={styles.testName}>{report.testName}</Text>
           <Text style={styles.testDescription}>{report.testDescription}</Text>
@@ -141,17 +192,9 @@ export default function TestReportScreen() {
           </View>
         </View>
         
-        {/* Questions Analysis */}
         <Text style={styles.sectionTitle}>Question-wise Analysis</Text>
         
-        {report.answers.map((answer, index) => {
-          return renderQuestionItem({
-            ...answer,
-            questionText: question?.text || 'Question not found',
-            correctOption: question?.correctOption,
-            explanation: question?.explanation
-          }, index);
-        })}
+        {report.answers?.map((answer, index) => renderQuestionItem(answer, index))}
       </ScrollView>
     </View>
   );
@@ -297,15 +340,6 @@ const styles = StyleSheet.create({
   statusText: {
     fontSize: 12,
     fontWeight: 'bold',
-  },
-  correctText: {
-    color: '#4CAF50',
-  },
-  incorrectText: {
-    color: '#F44336',
-  },
-  skippedText: {
-    color: '#FFC107',
   },
   questionText: {
     fontSize: 16,

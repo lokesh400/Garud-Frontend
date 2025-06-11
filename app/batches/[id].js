@@ -14,15 +14,44 @@ import {
 } from "react-native";
 import { apiFetch } from "../../utils/api";
 import { useRouter } from "expo-router";
+import * as FileSystem from 'expo-file-system';
 
 export default function BatchDetails() {
   const { id } = useLocalSearchParams();
   const [batch, setBatch] = useState(null);
   const [activeTab, setActiveTab] = useState("tests");
   const [announcements, setAnnouncements] = useState([]);
+  const [resources, setResources] = useState([]);
   const [loading, setLoading] = useState(true);
 
   const router = useRouter();
+
+  const downloadResource = async (zenodoLink) => {
+  try {
+    // Generate a local file path
+    const fileName = zenodoLink.split('/').pop() || `document_${Date.now()}.pdf`;
+    console.lof
+    const localUri = `${FileSystem.documentDirectory}${fileName}`;
+
+    // Download and save the file
+    const downloadResumable = FileSystem.createDownloadResumable(
+      zenodoLink,
+      localUri,
+      {},
+      (progress) => {
+        console.log(`Downloaded: ${(progress.totalBytesWritten / progress.totalBytesExpectedToWrite) * 100}%`);
+      }
+    );
+
+    const { uri } = await downloadResumable.downloadAsync();
+
+    console.log("PDF saved to:", uri);
+    return uri; // Returns local file path
+  } catch (err) {
+    console.error("Download failed:", err);
+    throw err;
+  }
+};
 
   useEffect(() => {
     apiFetch(`/api/batches/${id}`)
@@ -46,6 +75,17 @@ export default function BatchDetails() {
     }
   };
 
+  const fetchResources = async () => {
+    try {
+      const res = await apiFetch(`/api/batches/${id}/resource`);
+      const data = await res.json();
+      setResources(data);
+    } catch (err) {
+      console.error(err);
+      Alert.alert("Error", "Unable to load resources");
+    }
+  };
+
   if (loading) {
     return (
       <View style={styles.loadingContainer}>
@@ -65,6 +105,7 @@ export default function BatchDetails() {
 
         {/* Tab Navigation */}
         <View style={styles.tabContainer}>
+
           <TouchableOpacity
             style={[
               styles.tabButton,
@@ -122,57 +163,93 @@ export default function BatchDetails() {
             </Text>
           </TouchableOpacity>
 
+          <TouchableOpacity
+            style={[
+            styles.tabButton,
+            activeTab === "resources" && styles.activeTabButton,
+            ]}
+            onPress={() => {
+              setActiveTab("resources");
+             fetchResources(); 
+            }}
+          >
+          <Text
+            style={[
+             styles.tabText,
+             activeTab === "resources" && styles.activeTabText,
+            ]}
+            >
+           Resources
+           </Text>
+         </TouchableOpacity>
+
         </View>
 
         {/* Content Area */}
         <View style={styles.contentContainer}>
-          {activeTab === "announcements" ? (
-            announcements.length > 0 ? (
-              <FlatList
-                data={announcements}
-                keyExtractor={(item, index) => index.toString()}
-                renderItem={({ item }) => (
-                  <View style={styles.announcementCard}>
-                    <Text style={styles.announcementText}>• {item}</Text>
-                  </View>
-                )}
-              />
-            ) : (
-              <View style={styles.emptyState}>
-                <Text style={styles.emptyStateText}>No announcements available</Text>
-              </View>
-            )
-          ) : batch.tests && batch.tests.length > 0 ? (
-            <FlatList
-              data={batch.tests}
-              keyExtractor={(item) => item.id}
-              contentContainerStyle={styles.testList}
-              renderItem={({ item }) => (
-                <View style={styles.testCard}>
-                  <Text style={styles.testTitle}>{item.title}</Text>
-                  <View style={styles.buttonContainer}>
-                    <TouchableOpacity
-                      style={styles.secondaryButton}
-                      onPress={() => router.push(`/test/report/${item.id}`)}
-                    >
-                      <Text style={styles.buttonText}>View Result</Text>
-                    </TouchableOpacity>
-                    <TouchableOpacity
-                      style={styles.primaryButton}
-                      onPress={() => router.push(`/test/${item.id}`)}
-                    >
-                      <Text style={styles.buttonText}>Attempt Test</Text>
-                    </TouchableOpacity>
-                  </View>
-                </View>
-              )}
-            />
-          ) : (
-            <View style={styles.emptyState}>
-              <Text style={styles.emptyStateText}>No tests available</Text>
-            </View>
-          )}
+  {activeTab === "announcements" ? (
+    announcements.length > 0 ? (
+      <FlatList
+        data={announcements}
+        keyExtractor={(item, index) => index.toString()}
+        renderItem={({ item }) => (
+          <View style={styles.announcementCard}>
+            <Text style={styles.announcementText}>• {item}</Text>
+          </View>
+        )}
+      />
+    ) : (
+      <View style={styles.emptyState}>
+        <Text style={styles.emptyStateText}>No announcements available</Text>
+      </View>
+    )
+  ) : activeTab === "resources" ? (
+    <FlatList
+        data={resources}
+        keyExtractor={(item, index) => index.toString()}
+        renderItem={({ item }) => (
+          <TouchableOpacity 
+        style={styles.downloadButton}
+        onPress={() => downloadResource(`${item.zenodoLink}`)}
+      >
+        <Text style={styles.downloadButtonText}>{item.zenodoLink}</Text>
+      </TouchableOpacity>
+        )}
+      />
+    // <View style={styles.resourcesContainer}>
+    // </View>
+  ) : batch.tests && batch.tests.length > 0 ? (
+    <FlatList
+      data={batch.tests}
+      keyExtractor={(item) => item.id}
+      contentContainerStyle={styles.testList}
+      renderItem={({ item }) => (
+        <View style={styles.testCard}>
+          <Text style={styles.testTitle}>{item.title}</Text>
+          <View style={styles.buttonContainer}>
+            <TouchableOpacity
+              style={styles.secondaryButton}
+              onPress={() => router.push(`/test/report/${item.id}`)}
+            >
+              <Text style={styles.buttonText}>View Result</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={styles.primaryButton}
+              onPress={() => router.push(`/test/${item.id}`)}
+            >
+              <Text style={styles.buttonText}>Attempt Test</Text>
+            </TouchableOpacity>
+          </View>
         </View>
+      )}
+    />
+  ) : (
+    <View style={styles.emptyState}>
+      <Text style={styles.emptyStateText}>No tests available</Text>
+    </View>
+  )}
+</View>
+
       </SafeAreaView>
     </View>
   );

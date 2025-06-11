@@ -26,10 +26,10 @@ import { ActivityIndicator } from 'react-native';
 import BatchCarousel from '../components/BatchCarousel';
 
 const quickActions = [
-  { label: "All Batches", icon: "layers", bgColor: "#6366f1", route: "/batches/home" },
+  { label: "My Batches", icon: "layers", bgColor: "#6366f1", route: "/batches/myBatches" },
   { label: "Recent Learning", icon: "history", bgColor: "#10b981", route: "/" },
   { label: "My Doubts", icon: "help-circle", bgColor: "#f59e0b", route: "/" },
-  { label: "My Downloads", icon: "download", bgColor: "#3b82f6", route: "/" },
+  { label: "My Downloads", icon: "download", bgColor: "#3b82f6", route: "/batches/myDownloads" },
 ];
 
 const sidebarLinks = [

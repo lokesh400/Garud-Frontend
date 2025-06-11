@@ -12,7 +12,6 @@ import {
   StatusBar,
   Platform,
   TextInput,
-  Pressable
 } from "react-native";
 import { apiFetch,API_BASE } from "../../utils/api";
 import { Ionicons } from '@expo/vector-icons';
@@ -26,12 +25,8 @@ export default function Batches() {
   const [searchQuery, setSearchQuery] = useState("");
   const router = useRouter();
 
-  const openInNewTab = (id) => {
-    Linking.openURL(`${API_BASE}/purchase/explore/user/${id}`);
-  };
-
   useEffect(() => {
-    apiFetch("/api/batches")
+    apiFetch("/api/batches/my/purchased")
       .then((res) => res.json())
       .then((data) => {
         setBatches(data);
@@ -113,15 +108,8 @@ export default function Batches() {
                 style={[styles.button, styles.secondaryButton]}
                 onPress={() => router.push(`/batches/${item._id}`)}
               >
-                <Text style={styles.buttonText}>Explore</Text>
+                <Text style={styles.buttonText}>Study</Text>
               </TouchableOpacity>
-
-               <Pressable 
-               onPress={() => openInNewTab(item._id)}
-               style={[styles.button, styles.primaryButton]}>
-                  <Text>Buy</Text>
-               </Pressable>
-
             </View>
           </View>
         )}
