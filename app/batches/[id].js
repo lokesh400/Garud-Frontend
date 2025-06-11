@@ -26,12 +26,12 @@ export default function BatchDetails() {
 
   const router = useRouter();
 
-  const downloadResource = async (zenodoLink) => {
+  const downloadResource = async (id,zenodoLink) => {
   try {
     // Generate a local file path
     const fileName = zenodoLink.split('/').pop() || `document_${Date.now()}.pdf`;
-    console.lof
-    const localUri = `${FileSystem.documentDirectory}${fileName}`;
+    console.log("hitted")
+    const localUri = `${FileSystem.documentDirectory}${fileName}(${id})`;
 
     // Download and save the file
     const downloadResumable = FileSystem.createDownloadResumable(
@@ -210,7 +210,7 @@ export default function BatchDetails() {
         renderItem={({ item }) => (
           <TouchableOpacity 
         style={styles.downloadButton}
-        onPress={() => downloadResource(`${item.zenodoLink}`)}
+        onPress={() => downloadResource(`${id}`,`${item.zenodoLink}`)}
       >
         <Text style={styles.downloadButtonText}>{item.zenodoLink}</Text>
       </TouchableOpacity>
