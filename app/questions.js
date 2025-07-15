@@ -8,11 +8,19 @@ import {
   Alert,
   ActivityIndicator,
   StyleSheet,
+  StatusBar,
 } from "react-native";
+import { Ionicons } from "@expo/vector-icons";
+import { useSafeAreaInsets,SafeAreaView } from "react-native-safe-area-context";
+import { useRouter } from "expo-router";
+
 import { apiFetch } from "../utils/api";
 import AppFooter from "../components/AppFooter";
 
 export default function GroupedQuestionsScreen() {
+  const insets = useSafeAreaInsets();
+  const router = useRouter();
+
   const [grouped, setGrouped] = useState({});
   const [expandedQuestionId, setExpandedQuestionId] = useState(null);
   const [attempted, setAttempted] = useState({});
@@ -35,18 +43,14 @@ export default function GroupedQuestionsScreen() {
           const batchId = batch?._id || batch;
           const batchTitle = batch?.title || "Unknown Batch";
           const subject = q.SubjectName || "Unknown";
-
           const batchKey = `${batchId}||${batchTitle}`;
-
           if (!groupedByBatch[batchKey]) groupedByBatch[batchKey] = {};
           if (!groupedByBatch[batchKey][subject]) groupedByBatch[batchKey][subject] = [];
-
           groupedByBatch[batchKey][subject].push(q);
         });
 
         const attemptsMap = {};
         data.forEach((q) => (attemptsMap[q._id] = false));
-
         setGrouped(groupedByBatch);
         setAttempted(attemptsMap);
       } else {
@@ -75,7 +79,6 @@ export default function GroupedQuestionsScreen() {
 
       if (contentType && contentType.includes("application/json")) {
         const data = await res.json();
-
         if (res.ok) {
           Alert.alert(data.isCorrect ? "✅ Correct!" : "❌ Wrong Answer");
           setAttempted((prev) => ({ ...prev, [question._id]: true }));
@@ -84,23 +87,21 @@ export default function GroupedQuestionsScreen() {
         }
       } else {
         const text = await res.text();
-        console.log("⚠️ Response is not JSON:", text);
         throw new Error("Server returned non-JSON response");
       }
     } catch (err) {
-      console.error("Answer error:", err);
       Alert.alert("Error", err.message || "Something went wrong");
     }
   };
 
   const renderOptions = (q) => {
-    const fallbackOptions = ["Option A", "Option B", "Option C", "Option D"];
-    const options = Array.isArray(q.options) && q.options.length === 4 ? q.options : fallbackOptions;
+    const options = Array.isArray(q.options) && q.options.length === 4
+      ? q.options
+      : ["Option A", "Option B", "Option C", "Option D"];
     const isDisabled = attempted[q._id];
 
     return options.map((opt, idx) => {
       const label = ["A", "B", "C", "D"][idx];
-
       return (
         <TouchableOpacity
           key={idx}
@@ -108,7 +109,7 @@ export default function GroupedQuestionsScreen() {
           disabled={isDisabled}
           style={[
             styles.optionButton,
-            { backgroundColor: isDisabled ? "#ccc" : "#dfe9ff" },
+            { backgroundColor: isDisabled ? "#e5e7eb" : "#dbeafe" },
           ]}
         >
           <Text style={styles.optionText}>{label}. {opt}</Text>
@@ -117,104 +118,152 @@ export default function GroupedQuestionsScreen() {
     });
   };
 
-  if (loading) return <ActivityIndicator size="large" style={{ marginTop: 40 }} />;
-
   return (
-    <View style={{ flex: 1 }}>
-      <ScrollView contentContainerStyle={{ padding: 16 }}>
-        <Text style={styles.heading}>📅 Today's Questions</Text>
+    <SafeAreaView style={{ flex: 1 }}>
+      <StatusBar barStyle="dark-content" backgroundColor="#fff" />
+    <View style={{ flex: 1, backgroundColor: "#fff" }}>
 
-        {Object.keys(grouped).length === 0 ? (
-          <Text>No questions available today.</Text>
-        ) : (
-          Object.entries(grouped).map(([batchKey, subjects]) => {
-            const [batchId, batchTitle] = batchKey.split("||");
+      {/* Fixed Header */}
+      <View
+        style={[
+          styles.header,
+          {
+            paddingBottom: 14,
+          },
+        ]}
+      >
+        <TouchableOpacity onPress={() => router.back()} style={{ paddingRight: 15 }}>
+          <Ionicons name="chevron-back" size={24} color="#1e293b" />
+        </TouchableOpacity>
+        <Text style={styles.headerTitle}>Today's Questions</Text>
+      </View>
 
-            return (
-              <View key={batchId} style={styles.batchSection}>
-                <Text style={styles.batchTitle}>Batch: {batchTitle}</Text>
+      {/* Scrollable Content */}
+      {loading ? (
+        <ActivityIndicator size="large" style={{ marginTop: 40 }} />
+      ) : (
+        <ScrollView
+          contentContainerStyle={{
+            paddingTop: 20,
+            paddingBottom: insets.bottom + 90,
+            paddingHorizontal: 16,
+          }}
+        >
+          {Object.keys(grouped).length === 0 ? (
+            <Text style={styles.noQuestions}>No questions available today.</Text>
+          ) : (
+            Object.entries(grouped).map(([batchKey, subjects]) => {
+              const [batchId, batchTitle] = batchKey.split("||");
+              return (
+                <View key={batchId} style={styles.batchSection}>
+                  <Text style={styles.batchTitle}>Batch: {batchTitle}</Text>
+                  {Object.entries(subjects).map(([subjectName, questions]) => (
+                    <View key={subjectName} style={styles.subjectSection}>
+                      <Text style={styles.subjectTitle}>{subjectName}</Text>
+                      {questions.map((q) => (
+                        <View key={q._id} style={styles.questionCard}>
+                          <TouchableOpacity onPress={() => setExpandedQuestionId(q._id)}>
+                            <Image
+                              source={{ uri: q.Question || q.questionImageUrl }}
+                              style={styles.image}
+                            />
+                          </TouchableOpacity>
+                          {expandedQuestionId === q._id && (
+                            <View style={{ marginTop: 10 }}>{renderOptions(q)}</View>
+                          )}
+                        </View>
+                      ))}
+                    </View>
+                  ))}
+                </View>
+              );
+            })
+          )}
+        </ScrollView>
+      )}
 
-                {Object.entries(subjects).map(([subjectName, questions]) => (
-                  <View key={subjectName} style={styles.subjectSection}>
-                    <Text style={styles.subjectTitle}>{subjectName}</Text>
-
-                    {questions.map((q) => (
-                      <View key={q._id} style={styles.questionCard}>
-                        <TouchableOpacity onPress={() => setExpandedQuestionId(q._id)}>
-                          <Image
-                            source={{ uri: q.Question || q.questionImageUrl }}
-                            style={styles.image}
-                          />
-                        </TouchableOpacity>
-
-                        {expandedQuestionId === q._id && (
-                          <View style={{ marginTop: 10 }}>{renderOptions(q)}</View>
-                        )}
-                      </View>
-                    ))}
-                  </View>
-                ))}
-              </View>
-            );
-          })
-        )}
-      </ScrollView>
-
-      <AppFooter />
+      {/* Footer */}
+      <View style={{ paddingBottom: insets.bottom }}>
+        <AppFooter />
+      </View>
     </View>
+    </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
-  heading: {
-    fontSize: 22,
-    fontWeight: "bold",
-    marginBottom: 12,
+  header: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingHorizontal: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: "#e5e7eb",
+    backgroundColor: "#fff",
+    zIndex: 10,
+  },
+  headerTitle: {
+    fontSize: 20,
+    fontWeight: "700",
+    color: "#1e293b",
+  },
+  noQuestions: {
+    fontSize: 16,
+    color: "#64748b",
+    textAlign: "center",
+    marginTop: 40,
   },
   batchSection: {
     marginBottom: 24,
     backgroundColor: "#f0f4ff",
-    padding: 12,
-    borderRadius: 10,
+    padding: 14,
+    borderRadius: 12,
+    borderColor: "#c7d2fe",
+    borderWidth: 1,
   },
   batchTitle: {
     fontSize: 18,
-    fontWeight: "bold",
+    fontWeight: "600",
     marginBottom: 8,
-    color: "#333",
+    color: "#1e3a8a",
   },
   subjectSection: {
-    marginBottom: 12,
+    marginBottom: 16,
   },
   subjectTitle: {
     fontSize: 16,
     fontWeight: "600",
     marginBottom: 8,
-    color: "#4a4a4a",
+    color: "#374151",
   },
   questionCard: {
-    backgroundColor: "#fff",
-    borderRadius: 8,
+    backgroundColor: "#ffffff",
+    borderRadius: 12,
     padding: 10,
     marginBottom: 12,
     shadowColor: "#000",
-    shadowOpacity: 0.1,
-    shadowRadius: 6,
-    elevation: 3,
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.07,
+    shadowRadius: 3,
+    elevation: 2,
+    borderColor: "#e5e7eb",
+    borderWidth: 1,
   },
   image: {
     width: "100%",
     height: 200,
+    borderRadius: 8,
     resizeMode: "contain",
-    borderRadius: 6,
+    backgroundColor: "#f1f5f9",
   },
   optionButton: {
-    padding: 10,
-    borderRadius: 6,
-    marginTop: 6,
+    paddingVertical: 10,
+    paddingHorizontal: 14,
+    borderRadius: 8,
+    marginBottom: 8,
   },
   optionText: {
     fontSize: 15,
-    color: "#333",
+    color: "#1e293b",
+    fontWeight: "500",
   },
 });

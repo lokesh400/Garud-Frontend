@@ -1,10 +1,9 @@
 import { useRouter } from "expo-router";
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import {
   Animated,
   Dimensions,
   Pressable,
-  SafeAreaView,
   ScrollView,
   StyleSheet,
   Text,
@@ -14,12 +13,14 @@ import {
   StatusBar,
   Platform,
 } from "react-native";
-import { MaterialIcons, Ionicons, Feather } from '@expo/vector-icons';
-import * as Haptics from 'expo-haptics';
+import { Ionicons, Feather } from "@expo/vector-icons";
+import * as Haptics from "expo-haptics";
+import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";
+
 import AppFooter from "../components/AppFooter";
-import { Logout } from '../components/Logout';
+import { Logout } from "../components/Logout";
 import { apiFetch } from "../utils/api";
-import BatchCarousel from '../components/BatchCarousel';
+import BatchCarousel from "../components/BatchCarousel";
 
 const quickActions = [
   { label: "My Batches", icon: "layers", bgColor: "#6366f1", route: "/batches/myBatches" },
@@ -40,31 +41,30 @@ const screenWidth = Dimensions.get("window").width;
 
 export default function Dashboard() {
   const router = useRouter();
+  const insets = useSafeAreaInsets();
+
   const [sidebarOpen, setSidebarOpen] = useState(false);
-  const sidebarAnim = React.useRef(new Animated.Value(-screenWidth * 0.75)).current;
+  const sidebarAnim = useRef(new Animated.Value(-screenWidth * 0.75)).current;
+
   const [featuredBatches, setFeaturedBatches] = useState([]);
   const [loadingbatch, setLoadingbatch] = useState(true);
 
   useEffect(() => {
     const fetchFeaturedBatches = async () => {
       try {
-        const response = await apiFetch('/api/batches/find/trending');
-        if (!response.ok) throw new Error('Failed to fetch featured batches');
-        const data = await response.json();
-        setFeaturedBatches(data);
-      } catch (error) {
-        console.error('Error fetching featured batches:', error);
+        const res = await apiFetch("/api/batches/find/trending");
+        if (!res.ok) throw new Error("Failed to fetch featured batches");
+        setFeaturedBatches(await res.json());
+      } catch (err) {
+        console.error("Error fetching featured batches:", err);
       } finally {
         setLoadingbatch(false);
       }
     };
-
     fetchFeaturedBatches();
   }, []);
 
-  const handleLogoutSuccess = () => {
-    router.replace('/login');
-  };
+  const handleLogoutSuccess = () => router.replace("/login");
 
   const toggleSidebar = () => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
@@ -84,34 +84,35 @@ export default function Dashboard() {
     }
   };
 
-  const handleLinkPress = (route) => {
+  const go = (route) => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     toggleSidebar();
     router.push(route);
   };
 
   return (
-    <SafeAreaView style={styles.container}>
-      <StatusBar barStyle="dark-content" />
+    <SafeAreaView style={[styles.safeArea]}>
+      <StatusBar barStyle="dark-content" backgroundColor="#ffffff" />
 
       {sidebarOpen && <Pressable style={styles.overlay} onPress={toggleSidebar} />}
 
+      {/* Sidebar */}
       <Animated.View style={[styles.sidebar, { transform: [{ translateX: sidebarAnim }] }]}>
         <View style={styles.profileCard}>
           <View style={styles.avatarPlaceholder}>
             <Ionicons name="person" size={32} color="#6366f1" />
           </View>
-          <TouchableOpacity onPress={() => handleLinkPress("/profile")} style={styles.profileLink}>
+          <TouchableOpacity onPress={() => go("/profile")} style={styles.profileLink}>
             <Text style={styles.profileLinkText}>View Profile</Text>
             <Feather name="chevron-right" size={18} color="#6366f1" />
           </TouchableOpacity>
         </View>
 
         <Text style={styles.sidebarTitle}>Menu</Text>
-        {sidebarLinks.map((link, i) => (
-          <TouchableOpacity key={i} onPress={() => handleLinkPress(link.route)} style={styles.sidebarLink}>
-            <Ionicons name={link.icon} size={20} color="#64748b" />
-            <Text style={styles.sidebarLinkText}>{link.label}</Text>
+        {sidebarLinks.map((l, i) => (
+          <TouchableOpacity key={i} onPress={() => go(l.route)} style={styles.sidebarLink}>
+            <Ionicons name={l.icon} size={20} color="#64748b" />
+            <Text style={styles.sidebarLinkText}>{l.label}</Text>
           </TouchableOpacity>
         ))}
 
@@ -120,20 +121,24 @@ export default function Dashboard() {
         </View>
       </Animated.View>
 
+      {/* Header */}
       <View style={styles.header}>
         <TouchableOpacity onPress={toggleSidebar} style={styles.hamburger}>
           <Feather name="menu" size={24} color="#1e293b" />
         </TouchableOpacity>
-        <View style={styles.headerContent}>
-          <Text style={styles.title}>Garud Classes</Text>
-        </View>
+        <Text style={styles.title}>Garud Classes</Text>
       </View>
 
-      <ScrollView style={styles.contentContainer}>
+      {/* Main Scrollable Content */}
+      <ScrollView
+        style={styles.content}
+        showsVerticalScrollIndicator={false}
+        contentContainerStyle={{ paddingBottom: insets.bottom + 80 }}
+      >
         <ImageBackground
-          source={require('../assets/images/banner.png')}
-          style={styles.continueCard}
-          imageStyle={styles.continueCardImage}
+          source={require("../assets/images/banner.png")}
+          style={styles.bannerImage}
+          imageStyle={{ borderRadius: 12 }}
         />
 
         <View style={styles.classBox}>
@@ -151,77 +156,81 @@ export default function Dashboard() {
         <View style={styles.quickSection}>
           <Text style={styles.sectionTitle}>Quick Access</Text>
           <View style={styles.quickGrid}>
-            {quickActions.map((action, index) => (
+            {quickActions.map((a, i) => (
               <TouchableOpacity
-                key={index}
-                style={[styles.quickItem, { backgroundColor: action.bgColor }]}
-                onPress={() => router.push(action.route)}
+                key={i}
+                style={[styles.quickItem, { backgroundColor: a.bgColor }]}
+                onPress={() => router.push(a.route)}
               >
                 <View style={styles.quickIcon}>
-                  <Feather name={action.icon} size={24} color="#ffff" />
+                  <Feather name={a.icon} size={24} color="#fff" />
                 </View>
-                <Text style={styles.quickText}>{action.label}</Text>
+                <Text style={styles.quickText}>{a.label}</Text>
               </TouchableOpacity>
             ))}
           </View>
         </View>
 
-        <View style={{ flex: 1 }}>
-          <BatchCarousel batches={featuredBatches} />
-        </View>
+        <BatchCarousel batches={featuredBatches} />
 
-        <View style={styles.banner}>
-          <View style={styles.bannerIcon}>
-            <Ionicons name="megaphone" size={20} color="#92400e" />
-          </View>
-          <Text style={styles.bannerText}>
+        <View style={styles.notice}>
+          <Ionicons name="megaphone" size={20} color="#92400e" style={{ marginRight: 10 }} />
+          <Text style={styles.noticeText}>
             New Batch starting soon! Enroll now for early bird discounts.
           </Text>
         </View>
 
-        <View style={{ marginTop: 10 }} />
+        <View style={{ height: 10 }} />
       </ScrollView>
 
-      <AppFooter />
+      {/* Footer */}
+      <View style={{ paddingBottom: insets.bottom }}>
+        <AppFooter />
+      </View>
     </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: "#ffff" },
-  contentContainer: { paddingBottom: 80 },
+  safeArea: { flex: 1, backgroundColor: "#ffff" },
   header: {
     flexDirection: "row",
     alignItems: "center",
     paddingLeft: 20,
-    paddingTop: 18,
+    // paddingTop: 18,
     paddingBottom: 15,
-    backgroundColor: "#ffff",
     borderBottomWidth: 1,
-    borderBottomColor: "#e2e8f0"
+    borderBottomColor: "#e2e8f0",
+    backgroundColor: "#fff",
   },
   hamburger: { marginRight: 15 },
-  headerContent: { flex: 1 },
   title: { fontSize: 22, fontWeight: "700", color: "#1e293b" },
-  subText: { fontSize: 14, color: "#64748b", marginTop: 2 },
+  content: { flex: 1 },
+  bannerImage: {
+    height: 180,
+    marginHorizontal: 20,
+    marginTop: 20,
+    marginBottom: 20,
+    borderRadius: 12,
+    overflow: "hidden",
+  },
   classBox: {
     backgroundColor: "#fff",
     padding: 20,
-    margin: 20,
+    marginHorizontal: 20,
+    marginBottom: 20,
     borderRadius: 12,
     shadowColor: "#000",
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.05,
     shadowRadius: 6,
-    elevation: 2
+    elevation: 2,
   },
   classHeader: { flexDirection: "row", alignItems: "center", marginBottom: 10 },
-  classTitle: { fontSize: 16, fontWeight: "600", color: "#1e293b", marginLeft: 8 },
+  classTitle: { marginLeft: 8, fontSize: 16, fontWeight: "600", color: "#1e293b" },
   noClass: { fontSize: 15, color: "#64748b", marginBottom: 15 },
-  linkButton: { flexDirection: "row", alignItems: "center", alignSelf: "flex-start" },
+  linkButton: { flexDirection: "row", alignItems: "center" },
   linkButtonText: { fontSize: 14, color: "#6366f1", fontWeight: "600", marginRight: 4 },
-  continueCard: { height: 180, marginHorizontal: 20, marginTop: 20, marginBottom: 20, borderRadius: 12, overflow: "hidden" },
-  continueCardImage: { borderRadius: 12 },
   quickSection: { paddingHorizontal: 20, marginBottom: 20 },
   sectionTitle: { fontSize: 18, fontWeight: "700", color: "#1e293b", marginBottom: 15 },
   quickGrid: { flexDirection: "row", flexWrap: "wrap", justifyContent: "space-between" },
@@ -234,7 +243,7 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
     shadowRadius: 4,
-    elevation: 2
+    elevation: 2,
   },
   quickIcon: {
     width: 40,
@@ -243,19 +252,18 @@ const styles = StyleSheet.create({
     backgroundColor: "rgba(255,255,255,0.2)",
     justifyContent: "center",
     alignItems: "center",
-    marginBottom: 10
+    marginBottom: 10,
   },
-  quickText: { fontWeight: "600", color: "#fff", fontSize: 15 },
-  banner: {
+  quickText: { color: "#fff", fontSize: 15, fontWeight: "600" },
+  notice: {
     backgroundColor: "#fef3c7",
+    flexDirection: "row",
+    alignItems: "center",
     padding: 15,
     marginHorizontal: 20,
     borderRadius: 12,
-    flexDirection: "row",
-    alignItems: "center"
   },
-  bannerIcon: { marginRight: 10 },
-  bannerText: { color: "#92400e", fontWeight: "500", flex: 1 },
+  noticeText: { color: "#92400e", fontWeight: "500", flex: 1 },
   sidebar: {
     position: "absolute",
     top: 0,
@@ -265,9 +273,9 @@ const styles = StyleSheet.create({
     backgroundColor: "#fff",
     paddingTop: 60,
     paddingHorizontal: 20,
-    zIndex: 1000,
     borderRightWidth: 1,
-    borderRightColor: "#e2e8f0"
+    borderRightColor: "#e2e8f0",
+    zIndex: 1000,
   },
   profileCard: {
     flexDirection: "row",
@@ -275,7 +283,7 @@ const styles = StyleSheet.create({
     marginBottom: 30,
     paddingBottom: 20,
     borderBottomWidth: 1,
-    borderBottomColor: "#e2e8f0"
+    borderBottomColor: "#e2e8f0",
   },
   avatarPlaceholder: {
     width: 50,
@@ -284,13 +292,34 @@ const styles = StyleSheet.create({
     backgroundColor: "#e0e7ff",
     justifyContent: "center",
     alignItems: "center",
-    marginRight: 15
+    marginRight: 15,
   },
   profileLink: { flexDirection: "row", alignItems: "center" },
-  profileLinkText: { fontSize: 16, color: "#6366f1", fontWeight: "500", marginRight: 5 },
-  sidebarTitle: { fontSize: 16, fontWeight: "600", color: "#64748b", marginBottom: 15, textTransform: "uppercase", letterSpacing: 1 },
-  sidebarLink: { flexDirection: "row", alignItems: "center", paddingVertical: 12, borderBottomWidth: 1, borderBottomColor: "#f1f5f9" },
-  sidebarLinkText: { fontSize: 16, color: "#1e293b", marginLeft: 15 },
+  profileLinkText: { fontSize: 16, fontWeight: "500", color: "#6366f1", marginRight: 5 },
+  sidebarTitle: {
+    fontSize: 16,
+    fontWeight: "600",
+    color: "#64748b",
+    textTransform: "uppercase",
+    letterSpacing: 1,
+    marginBottom: 15,
+  },
+  sidebarLink: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingVertical: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: "#f1f5f9",
+  },
+  sidebarLinkText: { fontSize: 16, marginLeft: 15, color: "#1e293b" },
   logoutContainer: { position: "absolute", bottom: 40, left: 20, right: 20 },
-  overlay: { position: "absolute", top: 0, left: 0, height: "100%", width: "100%", backgroundColor: "rgba(0,0,0,0.4)", zIndex: 999 }
+  overlay: {
+    position: "absolute",
+    top: 0,
+    left: 0,
+    width: "100%",
+    height: "100%",
+    backgroundColor: "rgba(0,0,0,0.4)",
+    zIndex: 999,
+  },
 });

@@ -1,25 +1,30 @@
 import { Image } from 'expo-image';
-import { useLocalSearchParams, useRouter, Stack } from "expo-router";
-import { useCallback, useEffect, useState } from "react";
+import { useLocalSearchParams, useRouter } from "expo-router";
+import { useEffect, useState, useRef } from "react";
 import {
   ActivityIndicator,
   Alert,
   BackHandler,
-  Dimensions,
   FlatList,
   ScrollView,
+  StyleSheet,
   Text,
   TextInput,
   TouchableOpacity,
   View,
-  PanResponder
+  StatusBar,
+  Platform,
+  Dimensions,
+  PanResponder,
 } from "react-native";
+import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";
 import { apiFetch } from "../../utils/api";
 
 export default function TestAttemptScreen() {
-  const screenWidth = Dimensions.get("window").width;
   const { testId } = useLocalSearchParams();
   const router = useRouter();
+  const screenWidth = Dimensions.get('window').width;
+  const insets = useSafeAreaInsets();
 
   const [test, setTest] = useState(null);
   const [currentQIndex, setCurrentQIndex] = useState(0);
@@ -29,36 +34,16 @@ export default function TestAttemptScreen() {
   const [submitting, setSubmitting] = useState(false);
   const [imageHeight, setImageHeight] = useState(200);
 
-  // Prevent hardware back button
   useEffect(() => {
-    const backHandler = BackHandler.addEventListener(
-      'hardwareBackPress',
-      () => {
-        Alert.alert(
-          "Exit Test",
-          "Are you sure you want to exit? Your progress will be lost.",
-          [
-            { text: "Cancel", style: "cancel" },
-            { 
-              text: "Exit", 
-              style: "destructive",
-              onPress: () => router.replace("/")
-            }
-          ]
-        );
-        return true;
-      }
-    );
-
+    const backHandler = BackHandler.addEventListener('hardwareBackPress', () => {
+      Alert.alert("Exit Test", "Are you sure you want to exit? Your progress will be lost.", [
+        { text: "Cancel", style: "cancel" },
+        { text: "Exit", style: "destructive", onPress: () => router.replace("/") }
+      ]);
+      return true;
+    });
     return () => backHandler.remove();
   }, []);
-
-  const handleImageLoad = ({ source }) => {
-    if (source.width && source.height) {
-      const ratio = source.height / source.width;
-      setImageHeight(screenWidth * ratio);
-    }
-  };
 
   useEffect(() => {
     apiFetch(`/api/tests/${testId}`)
@@ -67,10 +52,7 @@ export default function TestAttemptScreen() {
         setTest(data);
         setTimeLeft(data.time * 60);
       })
-      .catch(err => {
-        console.error(err);
-        Alert.alert("Error", "Failed to load test.");
-      })
+      .catch(() => Alert.alert("Error", "Failed to load test."))
       .finally(() => setLoading(false));
   }, [testId]);
 
@@ -89,63 +71,57 @@ export default function TestAttemptScreen() {
     return () => clearInterval(timer);
   }, [test]);
 
-  // Swipe gesture handlers
-  const panResponder = PanResponder.create({
-    onStartShouldSetPanResponder: () => true,
-    onPanResponderRelease: (evt, gestureState) => {
-      if (gestureState.dx < -50) {
-        // Swipe left - next question
-        handleNextQuestion();
-      } else if (gestureState.dx > 50) {
-        // Swipe right - previous question
-        handlePreviousQuestion();
-      }
-    },
-  });
+  const handleImageLoad = ({ source }) => {
+    if (source.width && source.height) {
+      const ratio = source.height / source.width;
+      setImageHeight(screenWidth * ratio);
+    }
+  };
+
+  const panResponder = useRef(
+    PanResponder.create({
+      onStartShouldSetPanResponder: () => true,
+      onPanResponderRelease: (_, gesture) => {
+        if (gesture.dx < -50) handleNextQuestion();
+        else if (gesture.dx > 50) handlePreviousQuestion();
+      },
+    })
+  ).current;
 
   const handleOptionSelect = (index) => {
-    const questionId = test.questions[currentQIndex]._id;
-    setAnswer(prev => ({ ...prev, [questionId]: index }));
+    const qid = test.questions[currentQIndex]._id;
+    setAnswer(prev => ({ ...prev, [qid]: index }));
   };
 
   const handleNumericalInput = (text) => {
-    const questionId = test.questions[currentQIndex]._id;
-    setAnswer(prev => ({ ...prev, [questionId]: text }));
+    const qid = test.questions[currentQIndex]._id;
+    setAnswer(prev => ({ ...prev, [qid]: text }));
   };
 
   const clearAnswer = () => {
-    const questionId = test.questions[currentQIndex]._id;
+    const qid = test.questions[currentQIndex]._id;
     setAnswer(prev => {
       const updated = { ...prev };
-      delete updated[questionId];
+      delete updated[qid];
       return updated;
     });
   };
 
   const handlePreviousQuestion = () => {
-    if (currentQIndex > 0) {
-      setCurrentQIndex(prev => prev - 1);
-    }
+    if (currentQIndex > 0) setCurrentQIndex(prev => prev - 1);
   };
 
   const handleNextQuestion = () => {
-    if (currentQIndex < test.questions.length - 1) {
-      setCurrentQIndex(prev => prev + 1);
-    } else {
-      // If on last question, go back to first question
-      setCurrentQIndex(0);
-    }
+    if (currentQIndex < test.questions.length - 1) setCurrentQIndex(prev => prev + 1);
+    else setCurrentQIndex(0);
   };
 
   const handleSubmit = async () => {
     if (submitting) return;
-
     Alert.alert("Submit Test", "Are you sure you want to submit?", [
       { text: "Cancel", style: "cancel" },
       {
-        text: "Submit",
-        style: "destructive",
-        onPress: async () => {
+        text: "Submit", style: "destructive", onPress: async () => {
           setSubmitting(true);
           try {
             const payload = {
@@ -153,25 +129,21 @@ export default function TestAttemptScreen() {
               totalQuestions: test.questions.length,
               attemptedQuestions: Object.keys(answer).length,
             };
-
             const res = await apiFetch(`/api/tests/${testId}/submit`, {
               method: "POST",
               headers: { "Content-Type": "application/json" },
               body: JSON.stringify(payload),
             });
-
-            if (!res.ok) throw new Error("Submission failed");
-
+            if (!res.ok) throw new Error();
             Alert.alert("Success", "Test submitted successfully!");
             router.replace("/");
-          } catch (err) {
-            console.error(err);
+          } catch {
             Alert.alert("Error", "Could not submit the test.");
           } finally {
             setSubmitting(false);
           }
-        },
-      },
+        }
+      }
     ]);
   };
 
@@ -183,152 +155,81 @@ export default function TestAttemptScreen() {
         attemptedQuestions: Object.keys(answer).length,
         autoSubmitted: true,
       };
-
       await apiFetch(`/api/tests/${testId}/submit`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload),
       });
-
       Alert.alert("Time's up", "Test auto-submitted.");
       router.replace("/");
-    } catch (err) {
-      console.error("Auto-submit failed", err);
-    }
+    } catch {}
   };
 
   if (loading) return <ActivityIndicator style={{ flex: 1, justifyContent: 'center' }} />;
-  if (!test) return <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}><Text>Test not found.</Text></View>;
+  if (!test) return <View style={styles.center}><Text>Test not found.</Text></View>;
 
   const question = test.questions[currentQIndex];
 
   return (
-    <View style={{ flex: 1, backgroundColor: '#ffff' }}>
-      {/* Custom header */}
-      <View style={{ 
-        padding: 15, 
-        backgroundColor: '#007bff',
-        flexDirection: 'row',
-        justifyContent: 'space-between',
-        alignItems: 'center',
-        paddingTop:35
-      }}>
-        <Text style={{ color: '#ffff', fontWeight: 'bold', fontSize: 18 }}>
-          {test.title}
-        </Text>
-        <Text style={{ color: '#ffff', fontWeight: 'bold' }}>
-          Time: {Math.floor(timeLeft / 60)}:{(timeLeft % 60).toString().padStart(2, "0")}
+    <SafeAreaView style={[styles.container]}>
+      <StatusBar barStyle="dark-content" backgroundColor="#fff" />
+
+      {/* Header */}
+      <View style={styles.header}>
+        <Text style={styles.headerTitle}>{test.title}</Text>
+        <Text style={styles.headerTimer}>
+          {Math.floor(timeLeft / 60)}:{(timeLeft % 60).toString().padStart(2, "0")}
         </Text>
       </View>
 
-      <ScrollView 
-        style={{ flex: 1 }} 
-        contentContainerStyle={{ padding: 15 }}
-        {...panResponder.panHandlers}
-      >
-        {/* Question Stats */}
-        <View style={{ 
-          flexDirection: "row", 
-          justifyContent: "space-between", 
-          marginBottom: 16,
-          backgroundColor: '#f8f9fa',
-          padding: 10,
-          borderRadius: 5
-        }}>
-          <Text style={{ fontSize: 14, color: '#495057' }}>Total: {test.questions.length}</Text>
-          <Text style={{ fontSize: 14, color: '#28a745' }}>Attempted: {Object.keys(answer).length}</Text>
-          <Text style={{ fontSize: 14, color: '#dc3545' }}>
-            Skipped: {test.questions.length - Object.keys(answer).length}
-          </Text>
+      <ScrollView contentContainerStyle={styles.scrollContent} {...panResponder.panHandlers}>
+        <View style={styles.statsBox}>
+          <Text>Total: {test.questions.length}</Text>
+          <Text>Attempted: {Object.keys(answer).length}</Text>
+          <Text>Skipped: {test.questions.length - Object.keys(answer).length}</Text>
         </View>
 
-        {/* Horizontal question navigator */}
         <FlatList
           data={test.questions}
           horizontal
           keyExtractor={(item) => item._id}
           showsHorizontalScrollIndicator={false}
-          contentContainerStyle={{ paddingVertical: 5 }}
+          contentContainerStyle={styles.questionNav}
           renderItem={({ item, index }) => {
             const isAttempted = answer.hasOwnProperty(item._id);
             const isCurrent = index === currentQIndex;
-
             return (
               <TouchableOpacity
                 onPress={() => setCurrentQIndex(index)}
-                style={{
-                  backgroundColor: isCurrent
-                    ? "#007bff"
-                    : isAttempted
-                    ? "#28a745"
-                    : "#e9ecef",
-                  paddingHorizontal: 14,
-                  paddingVertical: 10,
-                  borderRadius: 5,
-                  marginRight: 8,
-                  borderWidth: isCurrent ? 2 : 0,
-                  borderColor: isCurrent ? "#0056b3" : "transparent",
-                }}
+                style={[
+                  styles.questionNavItem,
+                  isCurrent ? styles.activeNav : isAttempted ? styles.attemptedNav : styles.defaultNav,
+                ]}
               >
-                <Text style={{ 
-                  color: isCurrent ? "#fff" : isAttempted ? "#fff" : "#495057", 
-                  fontWeight: "bold",
-                  fontSize: 14
-                }}>
-                  {index + 1}
-                </Text>
+                <Text style={styles.questionNavText}>{index + 1}</Text>
               </TouchableOpacity>
             );
           }}
-          style={{ marginBottom: 16 }}
         />
 
-        {/* Question Content */}
-        <View style={{ marginBottom: 20 }}>
-          <Text style={{ 
-            fontWeight: "600", 
-            fontSize: 18, 
-            marginBottom: 12,
-            color: '#212529'
-          }}>
-            Question {currentQIndex + 1}
-          </Text>
-          
-          <View style={{
-            backgroundColor: '#f8f9fa',
-            borderRadius: 8,
-            padding: 10,
-            marginBottom: 15
-          }}>
-            <Image
-              source={question.questionText}
-              style={{
-                width: screenWidth - 50,
-                height: imageHeight,
-                borderRadius: 6,
-              }}
-              contentFit="contain"
-              onLoad={handleImageLoad}
-            />
-          </View>
+        <Text style={styles.questionTitle}>Question {currentQIndex + 1}</Text>
+        <View style={styles.questionContainer}>
+          <Image
+            source={question.questionText}
+            style={[styles.image, { height: imageHeight }]}
+            contentFit="contain"
+            onLoad={handleImageLoad}
+          />
         </View>
 
-        {/* Options */}
         {question.questionType === "mcq" &&
           question.options.map((opt, idx) => (
             <TouchableOpacity
               key={idx}
               onPress={() => handleOptionSelect(idx)}
-              style={{
-                backgroundColor: answer[question._id] === idx ? "#d4edda" : "#f8f9fa",
-                padding: 16,
-                borderRadius: 10,
-                marginVertical: 6,
-                borderWidth: 1,
-                borderColor: answer[question._id] === idx ? "#c3e6cb" : "#dee2e6"
-              }}
+              style={[styles.option, answer[question._id] === idx && styles.selectedOption]}
             >
-              <Text style={{ fontSize: 16, color: '#212529' }}>{opt}</Text>
+              <Text style={styles.optionText}>{opt}</Text>
             </TouchableOpacity>
           ))}
 
@@ -336,99 +237,120 @@ export default function TestAttemptScreen() {
           <TextInput
             keyboardType="numeric"
             placeholder="Enter your answer"
-            placeholderTextColor="#6c757d"
             onChangeText={handleNumericalInput}
             value={answer[question._id] || ""}
-            style={{
-              borderColor: answer[question._id] ? "#28a745" : "#ced4da",
-              borderWidth: 1,
-              padding: 14,
-              marginVertical: 8,
-              borderRadius: 8,
-              fontSize: 16,
-              backgroundColor: '#fff'
-            }}
+            style={styles.input}
           />
         )}
 
-        {/* Clear Answer Button */}
         {answer[question._id] !== undefined && (
-          <TouchableOpacity
-            onPress={clearAnswer}
-            style={{
-              backgroundColor: "#f8f9fa",
-              padding: 12,
-              borderRadius: 8,
-              alignItems: "center",
-              marginTop: 10,
-              borderWidth: 1,
-              borderColor: "#dee2e6"
-            }}
-          >
-            <Text style={{ color: "#dc3545", fontWeight: '500' }}>Clear Answer</Text>
+          <TouchableOpacity onPress={clearAnswer} style={styles.clearBtn}>
+            <Text style={styles.clearText}>Clear Answer</Text>
           </TouchableOpacity>
         )}
 
-        {/* Navigation Buttons */}
-        <View style={{ 
-          flexDirection: "row", 
-          justifyContent: "space-between", 
-          marginTop: 25,
-          marginBottom: 15
-        }}>
-          <TouchableOpacity
-            onPress={handlePreviousQuestion}
-            disabled={currentQIndex === 0}
-            style={{
-              backgroundColor: currentQIndex === 0 ? "#e9ecef" : "#007bff",
-              padding: 14,
-              borderRadius: 10,
-              flex: 1,
-              marginRight: 10,
-              alignItems: "center",
-              opacity: currentQIndex === 0 ? 0.6 : 1
-            }}
-          >
-            <Text style={{ color: currentQIndex === 0 ? "#6c757d" : "#fff", fontWeight: "bold" }}>
-              Previous
-            </Text>
+        <View style={styles.navBtns}>
+          <TouchableOpacity onPress={handlePreviousQuestion} disabled={currentQIndex === 0} style={[
+            styles.navBtn,
+            { backgroundColor: currentQIndex === 0 ? '#ccc' : '#007bff' }
+          ]}>
+            <Text style={styles.navBtnText}>Previous</Text>
           </TouchableOpacity>
 
-          <TouchableOpacity
-            onPress={handleNextQuestion}
-            disabled={currentQIndex === test.questions.length - 1 && submitting}
-            style={{
-              backgroundColor: currentQIndex === test.questions.length - 1 ? "#28a745" : "#007bff",
-              padding: 14,
-              borderRadius: 10,
-              flex: 1,
-              marginLeft: 10,
-              alignItems: "center"
-            }}
-          >
-            <Text style={{ color: "#ffff", fontWeight: "bold" }}>
+          <TouchableOpacity onPress={handleNextQuestion} style={[styles.navBtn, { backgroundColor: '#28a745' }]}>
+            <Text style={styles.navBtnText}>
               {currentQIndex === test.questions.length - 1 ? "Back to Start" : "Next"}
             </Text>
           </TouchableOpacity>
         </View>
       </ScrollView>
 
-      {/* Submit Button */}
-      <TouchableOpacity
-        onPress={handleSubmit}
-        disabled={submitting}
-        style={{
-          backgroundColor: submitting ? "#6c757d" : "#007bff",
-          padding: 16,
-          alignItems: "center",
-          justifyContent: 'center',
-          flexDirection: 'row'
-        }}
-      >
-        <Text style={{ color: "#fff", fontWeight: "bold", fontSize: 16, marginRight: 10 }}>
-          {submitting ? "Submitting..." : "Submit Test"}
-        </Text>
+      <TouchableOpacity onPress={handleSubmit} disabled={submitting} style={styles.submitBtn}>
+        <Text style={styles.submitText}>{submitting ? "Submitting..." : "Submit Test"}</Text>
       </TouchableOpacity>
-    </View>
+    </SafeAreaView>
   );
 }
+
+const styles = StyleSheet.create({
+  container: { flex: 1, backgroundColor: '#fff' },
+  center: { flex: 1, justifyContent: 'center', alignItems: 'center' },
+  header: {
+    paddingHorizontal: 15,
+    paddingVertical: 10,
+    backgroundColor: '#fff',
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingTop: Platform.OS === 'android' ? 0 : 0,
+  },
+  headerTitle: { color: '#000', fontWeight: 'bold', fontSize: 18 },
+  headerTimer: { color: '#000', fontWeight: 'bold' },
+  scrollContent: { paddingHorizontal: 15, paddingBottom: 10 },
+  statsBox: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    backgroundColor: '#f1f3f5',
+    padding: 10,
+    borderRadius: 6,
+    marginBottom: 12,
+  },
+  questionNav: { paddingBottom: 10 },
+  questionNavItem: {
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 5,
+    marginRight: 8,
+  },
+  questionNavText: { fontWeight: 'bold', fontSize: 14 },
+  defaultNav: { backgroundColor: '#fff', borderWidth: 0.1, borderColor: 'black' },
+  attemptedNav: { backgroundColor: '#28a745' },
+  activeNav: { backgroundColor: '#007bff', borderWidth: 2, borderColor: '#0056b3' },
+  questionTitle: { fontWeight: '600', fontSize: 18, marginBottom: 10 },
+  questionContainer: { backgroundColor: '#fff', borderRadius: 8, marginBottom: 15 },
+  image: { width: '100%', borderRadius: 6 },
+  option: {
+    backgroundColor: '#fff',
+    padding: 14,
+    borderRadius: 8,
+    marginBottom: 10,
+    borderWidth: 1,
+    borderColor: '#dee2e6',
+  },
+  selectedOption: { backgroundColor: '#d4edda', borderColor: '#c3e6cb' },
+  optionText: { fontSize: 16 },
+  input: {
+    borderColor: '#ced4da',
+    borderWidth: 1,
+    padding: 14,
+    borderRadius: 8,
+    fontSize: 16,
+    backgroundColor: '#fff',
+    marginBottom: 10,
+  },
+  clearBtn: {
+    backgroundColor: '#f8f9fa',
+    padding: 12,
+    borderRadius: 8,
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: '#dee2e6',
+    marginBottom: 15,
+  },
+  clearText: { color: '#dc3545', fontWeight: '500' },
+  navBtns: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 20 },
+  navBtn: {
+    padding: 14,
+    borderRadius: 10,
+    flex: 1,
+    alignItems: 'center',
+    marginHorizontal: 5,
+  },
+  navBtnText: { color: '#fff', fontWeight: 'bold' },
+  submitBtn: {
+    backgroundColor: '#007bff',
+    padding: 16,
+    alignItems: 'center',
+  },
+  submitText: { color: '#fff', fontWeight: 'bold', fontSize: 16 },
+});

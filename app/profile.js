@@ -83,7 +83,7 @@ export default function ProfileScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: "#f9fafb" },
+  container: { flex: 1, backgroundColor: "#fff",padding:20 },
   scrollContent: { padding: 20 },
   profileSection: {
     alignItems: "center",

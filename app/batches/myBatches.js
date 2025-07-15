@@ -8,12 +8,14 @@ import {
   Text,
   TouchableOpacity,
   View,
-  SafeAreaView,
   StatusBar,
-  Platform,
   TextInput,
+  Pressable,
+  Platform,
+  Linking,
 } from "react-native";
-import { apiFetch } from "../../utils/api";
+import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";
+import { apiFetch, API_BASE } from "../../utils/api";
 import { Ionicons } from '@expo/vector-icons';
 import AppFooter from "../../components/AppFooter";
 
@@ -23,6 +25,7 @@ export default function Batches() {
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
   const router = useRouter();
+  const insets = useSafeAreaInsets();
 
   useEffect(() => {
     apiFetch("/api/batches/my/purchased")
@@ -56,8 +59,9 @@ export default function Batches() {
   }
 
   return (
-    <SafeAreaView style={styles.safeContainer}>
-      <StatusBar barStyle="dark-content" />
+    <SafeAreaView style={styles.container}>
+          <StatusBar barStyle="dark-content" backgroundColor="#ffffff" />
+    
 
       {/* Header */}
       <View style={styles.header}>
@@ -97,7 +101,7 @@ export default function Batches() {
               <Text style={styles.infoText}>Starts: {item.startingDate}</Text>
               <Text style={styles.infoText}>Class: {item.class}</Text>
             </View>
-            <View style={{ borderColor: "black", borderWidth: 0.4, marginBottom: 20 }} />
+            <View style={styles.divider} />
             <View style={styles.buttonsContainer}>
               <TouchableOpacity
                 style={[styles.button, styles.secondaryButton]}
@@ -116,15 +120,31 @@ export default function Batches() {
         }
       />
 
-      <AppFooter />
+              {/* Footer */}
+              <View style={{ paddingBottom: Platform.OS === 'ios' ? insets.bottom : 0 }}>
+                <AppFooter />
+              </View>
+      
     </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
-  safeContainer: {
+   container: {
     flex: 1,
-    backgroundColor: '#fff',
+    backgroundColor: '#ffffff',
+  },
+  header: {
+    paddingHorizontal: 16,
+    paddingBottom: 10,
+    borderBottomWidth: 1,
+    borderBottomColor: '#e0e0e0',
+    backgroundColor: '#ffffff',
+  },
+  headerTitle: {
+    fontSize: 22,
+    fontWeight: 'bold',
+    color: '#333',
   },
   loadingContainer: {
     flex: 1,
@@ -132,42 +152,30 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     backgroundColor: '#fff',
   },
-  header: {
-    paddingHorizontal: 16,
-    paddingVertical: 16,
-    borderBottomWidth: 1,
-    borderBottomColor: '#e0e0e0',
-    backgroundColor: '#fff',
-  },
-  headerTitle: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    color: '#333',
-  },
   searchContainer: {
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: '#f5f5f5',
     borderRadius: 10,
     paddingHorizontal: 10,
-    paddingVertical: 5,
-    marginTop: 15,
+    paddingVertical: 6,
+    marginTop: 12,
   },
   searchIcon: {
-    marginRight: 10,
+    marginRight: 8,
   },
   searchInput: {
     flex: 1,
     fontSize: 14,
-    color: '#333',
+    color: '#1e293b',
   },
   clearButton: {
-    marginLeft: 10,
+    marginLeft: 8,
   },
   listContent: {
     paddingHorizontal: 16,
-    paddingBottom: 80,
     paddingTop: 16,
+    paddingBottom: 80,
   },
   card: {
     backgroundColor: '#ffffff',
@@ -183,7 +191,7 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 18,
     fontWeight: '600',
-    color: '#333',
+    color: '#1e293b',
     marginBottom: 12,
   },
   image: {
@@ -195,20 +203,24 @@ const styles = StyleSheet.create({
   infoContainer: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    marginBottom: 16,
+    marginBottom: 12,
   },
   infoText: {
     fontSize: 14,
-    color: '#666',
+    color: '#475569',
+  },
+  divider: {
+    borderBottomColor: '#e2e8f0',
+    borderBottomWidth: 1,
+    marginBottom: 12,
   },
   buttonsContainer: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
-    gap: 12,
+    justifyContent: 'flex-end',
   },
   button: {
-    flex: 1,
-    paddingVertical: 12,
+    paddingVertical: 10,
+    paddingHorizontal: 24,
     borderRadius: 8,
     alignItems: 'center',
     justifyContent: 'center',
@@ -226,8 +238,8 @@ const styles = StyleSheet.create({
     paddingVertical: 50,
   },
   emptyText: {
-    fontSize: 18,
-    color: '#999',
+    fontSize: 16,
+    color: '#94a3b8',
     marginTop: 10,
   },
 });

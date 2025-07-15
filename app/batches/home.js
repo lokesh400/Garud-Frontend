@@ -8,16 +8,16 @@ import {
   Text,
   TouchableOpacity,
   View,
-  SafeAreaView,
   StatusBar,
-  Platform,
   TextInput,
-  Pressable
+  Pressable,
+  Platform,
+  Linking,
 } from "react-native";
-import { apiFetch,API_BASE } from "../../utils/api";
+import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";
+import { apiFetch, API_BASE } from "../../utils/api";
 import { Ionicons } from '@expo/vector-icons';
 import AppFooter from "../../components/AppFooter";
-import { Linking } from 'react-native';
 
 export default function Batches() {
   const [batches, setBatches] = useState([]);
@@ -25,6 +25,7 @@ export default function Batches() {
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
   const router = useRouter();
+  const insets = useSafeAreaInsets();
 
   const openInNewTab = (id) => {
     Linking.openURL(`${API_BASE}/purchase/explore/user/${id}`);
@@ -56,45 +57,43 @@ export default function Batches() {
   if (loading) {
     return (
       <View style={styles.loadingContainer}>
+        <StatusBar barStyle="dark-content" backgroundColor="#ffffff" />
         <ActivityIndicator size="large" />
       </View>
     );
   }
 
   return (
-    <View style={styles.container}>
-      <StatusBar barStyle="dark-content" />
-      
-      {/* Custom Header */}
-      <SafeAreaView style={styles.headerSafeArea}>
-        <View style={styles.header}>
-          <Text style={styles.headerTitle}>My Batches</Text>
-          
-          {/* Search Bar */}
-          <View style={styles.searchContainer}>
-            <Ionicons name="search" size={20} color="#999" style={styles.searchIcon} />
-            <TextInput
-              style={styles.searchInput}
-              placeholder="Search batches..."
-              placeholderTextColor="#999"
-              value={searchQuery}
-              onChangeText={setSearchQuery}
-            />
-            {searchQuery.length > 0 && (
-              <TouchableOpacity onPress={() => setSearchQuery("")} style={styles.clearButton}>
-                <Ionicons name="close-circle" size={20} color="#999" />
-              </TouchableOpacity>
-            )}
-          </View>
+    <SafeAreaView style={styles.container}>
+      <StatusBar barStyle="dark-content" backgroundColor="#ffffff" />
+
+      {/* Header */}
+      <View style={styles.header}>
+        <Text style={styles.headerTitle}>My Batches</Text>
+
+        <View style={styles.searchContainer}>
+          <Ionicons name="search" size={20} color="#999" style={styles.searchIcon} />
+          <TextInput
+            style={styles.searchInput}
+            placeholder="Search batches..."
+            placeholderTextColor="#999"
+            value={searchQuery}
+            onChangeText={setSearchQuery}
+          />
+          {searchQuery.length > 0 && (
+            <TouchableOpacity onPress={() => setSearchQuery("")} style={styles.clearButton}>
+              <Ionicons name="close-circle" size={20} color="#999" />
+            </TouchableOpacity>
+          )}
         </View>
-      </SafeAreaView>
-      
+      </View>
+
       {/* Content Area */}
+      
       <FlatList
         data={filteredBatches}
         keyExtractor={(item) => item._id}
         contentContainerStyle={styles.listContent}
-        style={styles.list}
         renderItem={({ item }) => (
           <View style={styles.card}>
             <Text style={styles.title}>{item.title}</Text>
@@ -107,7 +106,7 @@ export default function Batches() {
               <Text style={styles.infoText}>Starts: {item.startingDate}</Text>
               <Text style={styles.infoText}>Class: {item.class}</Text>
             </View>
-            <View style={{borderColor:"black",borderWidth:0.4,marginBottom:20}} ></View>
+            <View style={styles.divider} />
             <View style={styles.buttonsContainer}>
               <TouchableOpacity
                 style={[styles.button, styles.secondaryButton]}
@@ -116,12 +115,12 @@ export default function Batches() {
                 <Text style={styles.buttonText}>Explore</Text>
               </TouchableOpacity>
 
-               <Pressable 
-               onPress={() => openInNewTab(item._id)}
-               style={[styles.button, styles.primaryButton]}>
-                  <Text>Buy</Text>
-               </Pressable>
-
+              <Pressable
+                onPress={() => openInNewTab(item._id)}
+                style={[styles.button, styles.primaryButton]}
+              >
+                <Text style={styles.buttonText}>Buy</Text>
+              </Pressable>
             </View>
           </View>
         )}
@@ -132,32 +131,31 @@ export default function Batches() {
           </View>
         }
       />
-      
-      <AppFooter />
-    </View>
+
+      {/* Footer */}
+      <View style={{ paddingBottom: Platform.OS === 'ios' ? insets.bottom : 0 }}>
+        <AppFooter />
+      </View>
+    </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#ffff',
-    paddingBottom: 60, // Add padding to prevent content from being hidden behind footer
-  },
-  headerSafeArea: {
     backgroundColor: '#ffffff',
   },
   header: {
     paddingHorizontal: 16,
-    paddingVertical: 16,
+    paddingBottom: 10,
     borderBottomWidth: 1,
     borderBottomColor: '#e0e0e0',
+    backgroundColor: '#ffffff',
   },
   headerTitle: {
-    fontSize: 24,
+    fontSize: 22,
     fontWeight: 'bold',
     color: '#333',
-    marginTop: Platform.OS === 'android' ? StatusBar.currentHeight : 0,
   },
   searchContainer: {
     flexDirection: 'row',
@@ -165,11 +163,11 @@ const styles = StyleSheet.create({
     backgroundColor: '#f5f5f5',
     borderRadius: 10,
     paddingHorizontal: 10,
-    paddingVertical: 5,
-    marginTop: 15,
+    paddingVertical: 6,
+    marginTop: 10,
   },
   searchIcon: {
-    marginRight: 10,
+    marginRight: 8,
   },
   searchInput: {
     flex: 1,
@@ -177,21 +175,18 @@ const styles = StyleSheet.create({
     color: '#333',
   },
   clearButton: {
-    marginLeft: 10,
-  },
-  list: {
-    flex: 1,
+    marginLeft: 8,
   },
   listContent: {
     paddingHorizontal: 16,
-    paddingBottom: 24,
     paddingTop: 16,
+    paddingBottom: 80,
   },
   loadingContainer: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: '#f8f9fa',
+    backgroundColor: '#ffffff',
   },
   card: {
     backgroundColor: '#ffffff',
@@ -200,15 +195,15 @@ const styles = StyleSheet.create({
     marginBottom: 16,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 6,
-    elevation: 3,
+    shadowOpacity: 0.07,
+    shadowRadius: 4,
+    elevation: 2,
   },
   title: {
     fontSize: 18,
     fontWeight: '600',
     color: '#333',
-    marginBottom: 12,
+    marginBottom: 10,
   },
   image: {
     width: '100%',
@@ -219,16 +214,21 @@ const styles = StyleSheet.create({
   infoContainer: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    marginBottom: 16,
+    marginBottom: 12,
   },
   infoText: {
     fontSize: 14,
     color: '#666',
   },
+  divider: {
+    borderBottomColor: '#ccc',
+    borderBottomWidth: 0.5,
+    marginBottom: 16,
+  },
   buttonsContainer: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    gap: 12,
+    gap: 10,
   },
   button: {
     flex: 1,
@@ -244,15 +244,13 @@ const styles = StyleSheet.create({
     backgroundColor: '#e0d6eb',
   },
   buttonText: {
-    color: '#fff',
+    color: '#ffffff',
     fontWeight: '600',
     fontSize: 15,
   },
   emptyContainer: {
-    flex: 1,
-    justifyContent: 'center',
     alignItems: 'center',
-    paddingVertical: 50,
+    marginTop: 80,
   },
   emptyText: {
     fontSize: 18,

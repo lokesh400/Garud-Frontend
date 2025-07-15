@@ -1,4 +1,4 @@
-import { useLocalSearchParams } from "expo-router";
+import { useLocalSearchParams, useRouter } from "expo-router";
 import { useEffect, useState } from "react";
 import {
   ActivityIndicator,
@@ -10,57 +10,29 @@ import {
   View,
   SafeAreaView,
   StatusBar,
-  Platform
+  Platform,
 } from "react-native";
-import { apiFetch } from "../../utils/api";
-import { useRouter } from "expo-router";
 import * as FileSystem from 'expo-file-system';
+import * as IntentLauncher from 'expo-intent-launcher';
+import * as Linking from 'expo-linking';
+import { apiFetch } from "../../utils/api";
 
 export default function BatchDetails() {
   const { id } = useLocalSearchParams();
+  const router = useRouter();
+
   const [batch, setBatch] = useState(null);
   const [activeTab, setActiveTab] = useState("tests");
   const [announcements, setAnnouncements] = useState([]);
   const [resources, setResources] = useState([]);
   const [loading, setLoading] = useState(true);
-
-  const router = useRouter();
-
-  const downloadResource = async (id,zenodoLink) => {
-  try {
-    // Generate a local file path
-    const fileName = zenodoLink.split('/').pop() || `document_${Date.now()}.pdf`;
-    console.log("hitted")
-    const localUri = `${FileSystem.documentDirectory}${fileName}(${id})`;
-
-    // Download and save the file
-    const downloadResumable = FileSystem.createDownloadResumable(
-      zenodoLink,
-      localUri,
-      {},
-      (progress) => {
-        console.log(`Downloaded: ${(progress.totalBytesWritten / progress.totalBytesExpectedToWrite) * 100}%`);
-      }
-    );
-
-    const { uri } = await downloadResumable.downloadAsync();
-
-    console.log("PDF saved to:", uri);
-    return uri; // Returns local file path
-  } catch (err) {
-    console.error("Download failed:", err);
-    throw err;
-  }
-};
+  const [downloadStatus, setDownloadStatus] = useState({}); // downloading/downloading/open
 
   useEffect(() => {
     apiFetch(`/api/batches/${id}`)
       .then((res) => res.json())
       .then(setBatch)
-      .catch((err) => {
-        console.error(err);
-        Alert.alert("Error", "Failed to load batch.");
-      })
+      .catch(() => Alert.alert("Error", "Failed to load batch."))
       .finally(() => setLoading(false));
   }, [id]);
 
@@ -69,8 +41,7 @@ export default function BatchDetails() {
       const res = await apiFetch(`/batch/${id}/announcements`);
       const data = await res.json();
       setAnnouncements(data);
-    } catch (err) {
-      console.error(err);
+    } catch {
       Alert.alert("Error", "Unable to load announcements.");
     }
   };
@@ -80,299 +51,304 @@ export default function BatchDetails() {
       const res = await apiFetch(`/api/batches/${id}/resource`);
       const data = await res.json();
       setResources(data);
-    } catch (err) {
-      console.error(err);
-      Alert.alert("Error", "Unable to load resources");
+
+      // Check local files
+      const statusMap = {};
+      for (let item of data) {
+        const fileName = getFileName(item.zenodoLink, item._id);
+        const localUri = `${FileSystem.documentDirectory}${fileName}`;
+        const fileInfo = await FileSystem.getInfoAsync(localUri);
+        if (fileInfo.exists) {
+          statusMap[item._id] = "downloaded";
+        }
+      }
+      setDownloadStatus(statusMap);
+    } catch {
+      Alert.alert("Error", "Unable to load resources.");
     }
   };
+
+  const getFileName = (url, id) => {
+    const name = url.split("/").pop()?.split("?")[0] || `document_${Date.now()}.pdf`;
+    return `${id}_${name}`;
+  };
+
+  const downloadOrOpen = async (item) => {
+    const fileName = getFileName(item.zenodoLink, item._id);
+    const localUri = `${FileSystem.documentDirectory}${fileName}`;
+
+    const fileInfo = await FileSystem.getInfoAsync(localUri);
+    if (fileInfo.exists) {
+      openFile(localUri);
+      return;
+    }
+
+    setDownloadStatus((prev) => ({ ...prev, [item._id]: "downloading" }));
+
+    try {
+      const downloadResumable = FileSystem.createDownloadResumable(
+        item.zenodoLink,
+        localUri,
+        {},
+        (progress) => {
+          const percent = (progress.totalBytesWritten / progress.totalBytesExpectedToWrite) * 100;
+          console.log(`Download ${item._id}: ${percent.toFixed(2)}%`);
+        }
+      );
+
+      await downloadResumable.downloadAsync();
+      setDownloadStatus((prev) => ({ ...prev, [item._id]: "downloaded" }));
+      openFile(localUri);
+    } catch (err) {
+      Alert.alert("Download Failed", "Could not download the file.");
+      setDownloadStatus((prev) => ({ ...prev, [item._id]: undefined }));
+    }
+  };
+
+const openFile = async (uri) => {
+  try {
+    await IntentLauncher.startActivityAsync('android.intent.action.VIEW', {
+      data: localUri,
+      flags: 1,
+      type: 'application/pdf',
+    });
+  } catch (err) {
+    console.error("Failed to open PDF:", err);
+  }
+};
+
 
   if (loading) {
     return (
       <View style={styles.loadingContainer}>
+        <StatusBar barStyle="dark-content" backgroundColor="#ffffff" />
         <ActivityIndicator size="large" />
       </View>
     );
   }
 
   return (
-    <View style={styles.container}>
-      <StatusBar barStyle="dark-content" />
-      <SafeAreaView style={styles.safeArea}>
-        {/* Custom Header */}
-        <View style={styles.header}>
-          <Text style={styles.headerTitle}>{batch.title}</Text>
-        </View>
+    <SafeAreaView style={styles.container}>
+      <StatusBar barStyle="dark-content" backgroundColor="#ffffff" />
 
-        {/* Tab Navigation */}
-        <View style={styles.tabContainer}>
-
-          <TouchableOpacity
-            style={[
-              styles.tabButton,
-              activeTab === "class" && styles.activeTabButton,
-            ]}
-            onPress={() => setActiveTab("class")}
-          >
-            <Text
-              style={[
-                styles.tabText,
-                activeTab === "class" && styles.activeTabText,
-              ]}
-            >
-              Class
-            </Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            style={[
-              styles.tabButton,
-              activeTab === "tests" && styles.activeTabButton,
-            ]}
-            onPress={() => {
-              setActiveTab("tests");
-              fetchAnnouncements();
-            }}
-          >
-            <Text
-              style={[
-                styles.tabText,
-                activeTab === "tsets" && styles.activeTabText,
-              ]}
-            >
-              Tests
-            </Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            style={[
-              styles.tabButton,
-              activeTab === "announcements" && styles.activeTabButton,
-            ]}
-            onPress={() => {
-              setActiveTab("announcements");
-              fetchAnnouncements();
-            }}
-          >
-            <Text
-              style={[
-                styles.tabText,
-                activeTab === "announcements" && styles.activeTabText,
-              ]}
-            >
-              Announcements
-            </Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            style={[
-            styles.tabButton,
-            activeTab === "resources" && styles.activeTabButton,
-            ]}
-            onPress={() => {
-              setActiveTab("resources");
-             fetchResources(); 
-            }}
-          >
-          <Text
-            style={[
-             styles.tabText,
-             activeTab === "resources" && styles.activeTabText,
-            ]}
-            >
-           Resources
-           </Text>
-         </TouchableOpacity>
-
-        </View>
-
-        {/* Content Area */}
-        <View style={styles.contentContainer}>
-  {activeTab === "announcements" ? (
-    announcements.length > 0 ? (
-      <FlatList
-        data={announcements}
-        keyExtractor={(item, index) => index.toString()}
-        renderItem={({ item }) => (
-          <View style={styles.announcementCard}>
-            <Text style={styles.announcementText}>• {item}</Text>
-          </View>
-        )}
-      />
-    ) : (
-      <View style={styles.emptyState}>
-        <Text style={styles.emptyStateText}>No announcements available</Text>
+      {/* Header */}
+      <View style={styles.header}>
+        <Text style={styles.headerTitle}>{batch.title}</Text>
       </View>
-    )
-  ) : activeTab === "resources" ? (
-    <FlatList
-        data={resources}
-        keyExtractor={(item, index) => index.toString()}
-        renderItem={({ item }) => (
-          <TouchableOpacity 
-        style={styles.downloadButton}
-        onPress={() => downloadResource(`${id}`,`${item.zenodoLink}`)}
-      >
-        <Text style={styles.downloadButtonText}>{item.zenodoLink}</Text>
-      </TouchableOpacity>
-        )}
-      />
-    // <View style={styles.resourcesContainer}>
-    // </View>
-  ) : batch.tests && batch.tests.length > 0 ? (
-    <FlatList
-      data={batch.tests}
-      keyExtractor={(item) => item.id}
-      contentContainerStyle={styles.testList}
-      renderItem={({ item }) => (
-        <View style={styles.testCard}>
-          <Text style={styles.testTitle}>{item.title}</Text>
-          <View style={styles.buttonContainer}>
-            <TouchableOpacity
-              style={styles.secondaryButton}
-              onPress={() => router.push(`/test/report/${item.id}`)}
-            >
-              <Text style={styles.buttonText}>View Result</Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={styles.primaryButton}
-              onPress={() => router.push(`/test/${item.id}`)}
-            >
-              <Text style={styles.buttonText}>Attempt Test</Text>
-            </TouchableOpacity>
-          </View>
-        </View>
-      )}
-    />
-  ) : (
-    <View style={styles.emptyState}>
-      <Text style={styles.emptyStateText}>No tests available</Text>
-    </View>
-  )}
-</View>
 
-      </SafeAreaView>
-    </View>
+      {/* Tabs */}
+      <View style={styles.tabContainer}>
+        {["class", "tests", "announcements", "resources"].map((tab) => (
+          <TouchableOpacity
+            key={tab}
+            style={[styles.tabButton, activeTab === tab && styles.activeTabButton]}
+            onPress={() => {
+              setActiveTab(tab);
+              if (tab === "announcements") fetchAnnouncements();
+              if (tab === "resources") fetchResources();
+            }}
+          >
+            <Text style={[styles.tabText, activeTab === tab && styles.activeTabText]}>
+              {tab.charAt(0).toUpperCase() + tab.slice(1)}
+            </Text>
+          </TouchableOpacity>
+        ))}
+      </View>
+
+      {/* Content */}
+      <View style={styles.contentContainer}>
+        {activeTab === "announcements" ? (
+          announcements.length > 0 ? (
+            <FlatList
+              data={announcements}
+              keyExtractor={(item, index) => index.toString()}
+              renderItem={({ item }) => (
+                <View style={styles.card}>
+                  <Text style={styles.announcementText}>• {item}</Text>
+                </View>
+              )}
+            />
+          ) : (
+            <View style={styles.empty}>
+              <Text style={styles.emptyText}>No announcements available</Text>
+            </View>
+          )
+        ) : activeTab === "resources" ? (
+          <FlatList
+            data={resources}
+            keyExtractor={(item, index) => index.toString()}
+            renderItem={({ item }) => {
+              const status = downloadStatus[item._id];
+              const fileName = getFileName(item.zenodoLink, item._id);
+              return (
+                <View style={styles.resourceItem}>
+                  <Text style={styles.fileName}>{fileName}</Text>
+                  <TouchableOpacity
+                    onPress={() => downloadOrOpen(item)}
+                    style={styles.resourceBtn}
+                  >
+                    <Text style={styles.downloadButtonText}>
+                      {status === "downloading"
+                        ? "Downloading..."
+                        : status === "downloaded"
+                        ? "Open PDF"
+                        : "Download PDF"}
+                    </Text>
+                  </TouchableOpacity>
+                </View>
+              );
+            }}
+          />
+        ) : activeTab === "tests" && batch.tests?.length > 0 ? (
+          <FlatList
+            data={batch.tests}
+            keyExtractor={(item) => item.id}
+            renderItem={({ item }) => (
+              <View style={styles.card}>
+                <Text style={styles.testTitle}>{item.title}</Text>
+                <View style={styles.buttonRow}>
+                  <TouchableOpacity
+                    style={styles.secondaryButton}
+                    onPress={() => router.push(`/test/report/${item.id}`)}
+                  >
+                    <Text style={styles.buttonText}>View Result</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    style={styles.primaryButton}
+                    onPress={() => router.push(`/test/${item.id}`)}
+                  >
+                    <Text style={styles.buttonText}>Attempt Test</Text>
+                  </TouchableOpacity>
+                </View>
+              </View>
+            )}
+          />
+        ) : (
+          <View style={styles.empty}>
+            <Text style={styles.emptyText}>No tests available</Text>
+          </View>
+        )}
+      </View>
+    </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#f8f9fa',
-  },
-  safeArea: {
-    flex: 1,
-  },
-  loadingContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: '#f8f9fa',
-  },
+  container: { flex: 1, backgroundColor: "#ffffff" },
+  loadingContainer: { flex: 1, justifyContent: "center", alignItems: "center", backgroundColor: "#ffffff" },
   header: {
     paddingHorizontal: 16,
-    paddingTop: Platform.OS === 'android' ? StatusBar.currentHeight : 0,
-    paddingBottom: 16,
-    backgroundColor: '#ffffff',
+    paddingVertical: 16,
     borderBottomWidth: 1,
-    borderBottomColor: '#e0e0e0',
+    borderBottomColor: "#e0e0e0",
+    backgroundColor: "#ffffff",
   },
   headerTitle: {
     fontSize: 22,
-    fontWeight: 'bold',
-    color: '#333',
+    fontWeight: "bold",
+    color: "#1e293b",
   },
   tabContainer: {
-    flexDirection: 'row',
-    justifyContent: 'space-around',
-    // paddingHorizontal: 16,
-    // paddingVertical: 12,
-    backgroundColor: '#ffffff',
+    flexDirection: "row",
+    justifyContent: "space-around",
     borderBottomWidth: 1,
-    borderBottomColor: '#f0f0f0',
+    borderBottomColor: "#f0f0f0",
+    backgroundColor: "#ffffff",
   },
   tabButton: {
-    paddingVertical: 8,
+    paddingVertical: 10,
     paddingHorizontal: 16,
-    borderRadius: 0,
   },
   activeTabButton: {
-    backgroundColor: '#6b28ad',
+    backgroundColor: "#6b28ad",
+    borderRadius: 4,
   },
   tabText: {
-    fontSize: 10,
-    fontWeight: '600',
-    color: '#666',
+    fontSize: 13,
+    color: "#666",
+    fontWeight: "600",
   },
   activeTabText: {
-    color: '#ffffff',
+    color: "#ffffff",
   },
   contentContainer: {
     flex: 1,
     padding: 16,
   },
-  testList: {
-    paddingBottom: 16,
-  },
-  testCard: {
-    backgroundColor: '#ffffff',
+  card: {
+    backgroundColor: "#ffffff",
     borderRadius: 12,
     padding: 16,
     marginBottom: 12,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 6,
-    elevation: 3,
-  },
-  testTitle: {
-    fontSize: 18,
-    fontWeight: '600',
-    color: '#333',
-    marginBottom: 12,
-  },
-  announcementCard: {
-    backgroundColor: '#ffffff',
-    borderRadius: 12,
-    padding: 16,
-    marginBottom: 12,
+    elevation: 2,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.08,
+    shadowRadius: 2,
   },
   announcementText: {
-    fontSize: 16,
-    color: '#444',
-    lineHeight: 24,
+    fontSize: 15,
+    color: "#444",
+    lineHeight: 22,
   },
-  buttonContainer: {
-    flexDirection: 'row',
-    justifyContent: 'flex-end',
+  testTitle: {
+    fontSize: 17,
+    fontWeight: "600",
+    color: "#333",
+    marginBottom: 10,
+  },
+  buttonRow: {
+    flexDirection: "row",
+    justifyContent: "flex-end",
     gap: 12,
   },
   primaryButton: {
-    backgroundColor: '#6b28ad',
-    paddingVertical: 12,
-    paddingHorizontal: 24,
+    backgroundColor: "#6b28ad",
+    paddingVertical: 10,
+    paddingHorizontal: 20,
     borderRadius: 8,
-    alignItems: 'center',
   },
   secondaryButton: {
-    backgroundColor: '#e0d6eb',
-    paddingVertical: 12,
-    paddingHorizontal: 24,
+    backgroundColor: "#e0d6eb",
+    paddingVertical: 10,
+    paddingHorizontal: 20,
     borderRadius: 8,
-    alignItems: 'center',
   },
   buttonText: {
-    color: '#ffffff',
-    fontWeight: '600',
-    fontSize: 15,
+    color: "#ffffff",
+    fontWeight: "600",
   },
-  emptyState: {
+  resourceItem: {
+    padding: 12,
+    backgroundColor: "#f1f5f9",
+    borderRadius: 8,
+    marginBottom: 10,
+  },
+  resourceBtn: {
+    backgroundColor: "#dbeafe",
+    paddingVertical: 8,
+    paddingHorizontal: 14,
+    borderRadius: 6,
+    alignSelf: 'flex-start',
+  },
+  fileName: {
+    fontSize: 14,
+    fontWeight: '500',
+    color: '#1e293b',
+    marginBottom: 6,
+  },
+  downloadButtonText: {
+    color: "#1e3a8a",
+    fontSize: 14,
+    fontWeight: "600",
+  },
+  empty: {
     flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
+    justifyContent: "center",
+    alignItems: "center",
   },
-  emptyStateText: {
+  emptyText: {
     fontSize: 16,
-    color: '#666',
+    color: "#888",
   },
 });
