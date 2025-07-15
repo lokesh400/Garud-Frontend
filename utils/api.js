@@ -1,10 +1,7 @@
 // export const API_BASE = "http://192.168.1.6:4000";
-
-export const API_BASE = "https://thetestpulse.com";
-
-
 // export const API_BASE = "http://10.30.104.198:4000";
 
+export const API_BASE = "https://thetestpulse.com";
 
 export async function apiFetch(path, options = {}) {
   return fetch(`${API_BASE}${path}`, {
