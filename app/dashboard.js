@@ -1,5 +1,5 @@
 import { useRouter } from "expo-router";
-import React, { useState,useEffect } from "react";
+import React, { useState, useEffect } from "react";
 import {
   Animated,
   Dimensions,
@@ -13,16 +13,12 @@ import {
   ImageBackground,
   StatusBar,
   Platform,
-  KeyboardAvoidingView
 } from "react-native";
-import { MaterialIcons, Ionicons, FontAwesome, Feather } from '@expo/vector-icons';
+import { MaterialIcons, Ionicons, Feather } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
 import AppFooter from "../components/AppFooter";
 import { Logout } from '../components/Logout';
-
 import { apiFetch } from "../utils/api";
-
-import { ActivityIndicator } from 'react-native';
 import BatchCarousel from '../components/BatchCarousel';
 
 const quickActions = [
@@ -46,29 +42,25 @@ export default function Dashboard() {
   const router = useRouter();
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const sidebarAnim = React.useRef(new Animated.Value(-screenWidth * 0.75)).current;
-
   const [featuredBatches, setFeaturedBatches] = useState([]);
   const [loadingbatch, setLoadingbatch] = useState(true);
 
-useEffect(() => {
-  const fetchFeaturedBatches = async () => {
-    try {
-      const response = await apiFetch('/api/batches/find/trending');
-      if (!response.ok) {
-        throw new Error('Failed to fetch featured batches');
+  useEffect(() => {
+    const fetchFeaturedBatches = async () => {
+      try {
+        const response = await apiFetch('/api/batches/find/trending');
+        if (!response.ok) throw new Error('Failed to fetch featured batches');
+        const data = await response.json();
+        setFeaturedBatches(data);
+      } catch (error) {
+        console.error('Error fetching featured batches:', error);
+      } finally {
+        setLoadingbatch(false);
       }
-      const data = await response.json();
-      setFeaturedBatches(data);
-    } catch (error) {
-      console.error('Error fetching featured batches:', error);
-    } finally {
-      setLoadingbatch(false);
-    }
-  };
+    };
 
-  fetchFeaturedBatches();
-}, []);
-
+    fetchFeaturedBatches();
+  }, []);
 
   const handleLogoutSuccess = () => {
     router.replace('/login');
@@ -99,31 +91,17 @@ useEffect(() => {
   };
 
   return (
-    <>
-      <View style={styles.container}>
-          <StatusBar barStyle="dark-content" />
-          
-          {/* Custom Header */}
-          <SafeAreaView style={styles.headerSafeArea}>
-            
-          </SafeAreaView>
-      {/* Sidebar Overlay */}
-      {sidebarOpen && (
-        <Pressable style={styles.overlay} onPress={toggleSidebar} />
-      )}
+    <SafeAreaView style={styles.container}>
+      <StatusBar barStyle="dark-content" />
 
-      {/* Sidebar */}
-      <Animated.View
-        style={[styles.sidebar, { transform: [{ translateX: sidebarAnim }] }]}
-      >
+      {sidebarOpen && <Pressable style={styles.overlay} onPress={toggleSidebar} />}
+
+      <Animated.View style={[styles.sidebar, { transform: [{ translateX: sidebarAnim }] }]}>
         <View style={styles.profileCard}>
           <View style={styles.avatarPlaceholder}>
             <Ionicons name="person" size={32} color="#6366f1" />
           </View>
-          <TouchableOpacity
-            onPress={() => handleLinkPress("/profile")}
-            style={styles.profileLink}
-          >
+          <TouchableOpacity onPress={() => handleLinkPress("/profile")} style={styles.profileLink}>
             <Text style={styles.profileLinkText}>View Profile</Text>
             <Feather name="chevron-right" size={18} color="#6366f1" />
           </TouchableOpacity>
@@ -131,11 +109,7 @@ useEffect(() => {
 
         <Text style={styles.sidebarTitle}>Menu</Text>
         {sidebarLinks.map((link, i) => (
-          <TouchableOpacity
-            key={i}
-            onPress={() => handleLinkPress(link.route)}
-            style={styles.sidebarLink}
-          >
+          <TouchableOpacity key={i} onPress={() => handleLinkPress(link.route)} style={styles.sidebarLink}>
             <Ionicons name={link.icon} size={20} color="#64748b" />
             <Text style={styles.sidebarLinkText}>{link.label}</Text>
           </TouchableOpacity>
@@ -146,43 +120,34 @@ useEffect(() => {
         </View>
       </Animated.View>
 
-      {/* Header */}
-        <View style={styles.header}>
-          <TouchableOpacity onPress={toggleSidebar} style={styles.hamburger}>
-            <Feather name="menu" size={24} color="#1e293b" />
-          </TouchableOpacity>
-          
-          <View style={styles.headerContent}>
-            <Text style={styles.title}>Garud Classes</Text>
-          </View>
+      <View style={styles.header}>
+        <TouchableOpacity onPress={toggleSidebar} style={styles.hamburger}>
+          <Feather name="menu" size={24} color="#1e293b" />
+        </TouchableOpacity>
+        <View style={styles.headerContent}>
+          <Text style={styles.title}>Garud Classes</Text>
         </View>
+      </View>
 
       <ScrollView style={styles.contentContainer}>
-
-        <ImageBackground 
-          source={require('../assets/images/banner.png')} // Add your own image
+        <ImageBackground
+          source={require('../assets/images/banner.png')}
           style={styles.continueCard}
           imageStyle={styles.continueCardImage}
-        >
-        </ImageBackground>
+        />
 
-        {/* Class Status Card */}
         <View style={styles.classBox}>
           <View style={styles.classHeader}>
             <Ionicons name="time-outline" size={20} color="#64748b" />
             <Text style={styles.classTitle}>Today's Class</Text>
           </View>
           <Text style={styles.noClass}>No class scheduled for today</Text>
-          <TouchableOpacity 
-            style={styles.linkButton}
-            onPress={() => router.push("/classes")}
-          >
+          <TouchableOpacity style={styles.linkButton} onPress={() => router.push("/classes")}>
             <Text style={styles.linkButtonText}>View All Classes</Text>
             <Feather name="chevron-right" size={16} color="#6366f1" />
           </TouchableOpacity>
         </View>
 
-        {/* Quick Access */}
         <View style={styles.quickSection}>
           <Text style={styles.sectionTitle}>Quick Access</Text>
           <View style={styles.quickGrid}>
@@ -202,10 +167,9 @@ useEffect(() => {
         </View>
 
         <View style={{ flex: 1 }}>
-         <BatchCarousel batches={featuredBatches} />
+          <BatchCarousel batches={featuredBatches} />
         </View>
 
-        {/* Banner */}
         <View style={styles.banner}>
           <View style={styles.bannerIcon}>
             <Ionicons name="megaphone" size={20} color="#92400e" />
@@ -215,51 +179,31 @@ useEffect(() => {
           </Text>
         </View>
 
-        <View style={{marginTop:10}} ></View>
-
+        <View style={{ marginTop: 10 }} />
       </ScrollView>
-    </View>
-    <AppFooter/>
-    </>
+
+      <AppFooter />
+    </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { 
-    flex: 1, 
-    backgroundColor: "#ffff", 
-    paddingTop:20,
-    marginBottom:60,
-  },
-  contentContainer: {
-    paddingBottom: 80
-  },
+  container: { flex: 1, backgroundColor: "#ffff" },
+  contentContainer: { paddingBottom: 80 },
   header: {
     flexDirection: "row",
     alignItems: "center",
     paddingLeft: 20,
     paddingTop: 18,
-    paddingBottom:15,
+    paddingBottom: 15,
     backgroundColor: "#ffff",
     borderBottomWidth: 1,
     borderBottomColor: "#e2e8f0"
   },
-  hamburger: {
-    marginRight: 15
-  },
-  headerContent: {
-    flex: 1
-  },
-  title: {
-    fontSize: 22,
-    fontWeight: "700",
-    color: "#1e293b"
-  },
-  subText: {
-    fontSize: 14,
-    color: "#64748b",
-    marginTop: 2
-  },
+  hamburger: { marginRight: 15 },
+  headerContent: { flex: 1 },
+  title: { fontSize: 22, fontWeight: "700", color: "#1e293b" },
+  subText: { fontSize: 14, color: "#64748b", marginTop: 2 },
   classBox: {
     backgroundColor: "#fff",
     padding: 20,
@@ -271,93 +215,16 @@ const styles = StyleSheet.create({
     shadowRadius: 6,
     elevation: 2
   },
-  classHeader: {
-    flexDirection: "row",
-    alignItems: "center",
-    marginBottom: 10
-  },
-  classTitle: {
-    fontSize: 16,
-    fontWeight: "600",
-    color: "#1e293b",
-    marginLeft: 8
-  },
-  noClass: {
-    fontSize: 15,
-    color: "#64748b",
-    marginBottom: 15
-  },
-  linkButton: {
-    flexDirection: "row",
-    alignItems: "center",
-    alignSelf: "flex-start"
-  },
-  linkButtonText: {
-    fontSize: 14,
-    color: "#6366f1",
-    fontWeight: "600",
-    marginRight: 4
-  },
-  continueCard: {
-    height: 180,
-    marginHorizontal: 20,
-    marginTop:20,
-    marginBottom: 20,
-    borderRadius: 12,
-    overflow: "hidden"
-  },
-  continueCardImage: {
-    borderRadius: 12,
-  },
-  continueContent: {
-    flex: 1,
-    padding: 20,
-    justifyContent: "flex-end",
-    backgroundColor: "rgba(0,0,0,0.4)"
-  },
-  continueBadge: {
-    color: "#fff",
-    fontSize: 12,
-    fontWeight: "700",
-    marginBottom: 8,
-    letterSpacing: 1
-  },
-  continueTitle: {
-    color: "#fff",
-    fontSize: 18,
-    fontWeight: "600",
-    marginBottom: 15
-  },
-  continueButton: {
-    flexDirection: "row",
-    alignItems: "center",
-    backgroundColor: "#6366f1",
-    alignSelf: "flex-start",
-    paddingVertical: 8,
-    paddingHorizontal: 16,
-    borderRadius: 20
-  },
-  continueButtonText: {
-    color: "#fff",
-    fontSize: 14,
-    fontWeight: "600",
-    marginRight: 8
-  },
-  quickSection: { 
-    paddingHorizontal: 20,
-    marginBottom: 20
-  },
-  sectionTitle: {
-    fontSize: 18,
-    fontWeight: "700",
-    color: "#1e293b",
-    marginBottom: 15
-  },
-  quickGrid: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    justifyContent: "space-between"
-  },
+  classHeader: { flexDirection: "row", alignItems: "center", marginBottom: 10 },
+  classTitle: { fontSize: 16, fontWeight: "600", color: "#1e293b", marginLeft: 8 },
+  noClass: { fontSize: 15, color: "#64748b", marginBottom: 15 },
+  linkButton: { flexDirection: "row", alignItems: "center", alignSelf: "flex-start" },
+  linkButtonText: { fontSize: 14, color: "#6366f1", fontWeight: "600", marginRight: 4 },
+  continueCard: { height: 180, marginHorizontal: 20, marginTop: 20, marginBottom: 20, borderRadius: 12, overflow: "hidden" },
+  continueCardImage: { borderRadius: 12 },
+  quickSection: { paddingHorizontal: 20, marginBottom: 20 },
+  sectionTitle: { fontSize: 18, fontWeight: "700", color: "#1e293b", marginBottom: 15 },
+  quickGrid: { flexDirection: "row", flexWrap: "wrap", justifyContent: "space-between" },
   quickItem: {
     width: "48%",
     padding: 15,
@@ -378,11 +245,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     marginBottom: 10
   },
-  quickText: {
-    fontWeight: "600",
-    color: "#fff",
-    fontSize: 15
-  },
+  quickText: { fontWeight: "600", color: "#fff", fontSize: 15 },
   banner: {
     backgroundColor: "#fef3c7",
     padding: 15,
@@ -391,15 +254,8 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center"
   },
-  bannerIcon: {
-    marginRight: 10
-  },
-  bannerText: {
-    color: "#92400e",
-    fontWeight: "500",
-    flex: 1
-  },
-  // Sidebar styles
+  bannerIcon: { marginRight: 10 },
+  bannerText: { color: "#92400e", fontWeight: "500", flex: 1 },
   sidebar: {
     position: "absolute",
     top: 0,
@@ -430,49 +286,11 @@ const styles = StyleSheet.create({
     alignItems: "center",
     marginRight: 15
   },
-  profileLink: {
-    flexDirection: "row",
-    alignItems: "center"
-  },
-  profileLinkText: {
-    fontSize: 16,
-    color: "#6366f1",
-    fontWeight: "500",
-    marginRight: 5
-  },
-  sidebarTitle: {
-    fontSize: 16,
-    fontWeight: "600",
-    color: "#64748b",
-    marginBottom: 15,
-    textTransform: "uppercase",
-    letterSpacing: 1
-  },
-  sidebarLink: {
-    flexDirection: "row",
-    alignItems: "center",
-    paddingVertical: 12,
-    borderBottomWidth: 1,
-    borderBottomColor: "#f1f5f9"
-  },
-  sidebarLinkText: {
-    fontSize: 16,
-    color: "#1e293b",
-    marginLeft: 15
-  },
-  logoutContainer: {
-    position: "absolute",
-    bottom: 40,
-    left: 20,
-    right: 20
-  },
-  overlay: {
-    position: "absolute",
-    top: 0,
-    left: 0,
-    height: "100%",
-    width: "100%",
-    backgroundColor: "rgba(0,0,0,0.4)",
-    zIndex: 999
-  }
+  profileLink: { flexDirection: "row", alignItems: "center" },
+  profileLinkText: { fontSize: 16, color: "#6366f1", fontWeight: "500", marginRight: 5 },
+  sidebarTitle: { fontSize: 16, fontWeight: "600", color: "#64748b", marginBottom: 15, textTransform: "uppercase", letterSpacing: 1 },
+  sidebarLink: { flexDirection: "row", alignItems: "center", paddingVertical: 12, borderBottomWidth: 1, borderBottomColor: "#f1f5f9" },
+  sidebarLinkText: { fontSize: 16, color: "#1e293b", marginLeft: 15 },
+  logoutContainer: { position: "absolute", bottom: 40, left: 20, right: 20 },
+  overlay: { position: "absolute", top: 0, left: 0, height: "100%", width: "100%", backgroundColor: "rgba(0,0,0,0.4)", zIndex: 999 }
 });

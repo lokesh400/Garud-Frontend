@@ -1,90 +1,116 @@
-import React, { useState } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Platform } from 'react-native';
+// app/pdfviewer.js
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import Pdf from 'react-native-pdf';
-import * as Progress from 'react-native-progress';
+import { View, Text, StyleSheet, TouchableOpacity, Alert } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import Pdf from 'react-native-pdf';
+import * as FileSystem from 'expo-file-system';
 
-export default function PDFViewer() {
-  const { uri, title } = useLocalSearchParams();
+export default function PdfViewer() {
+  const params = useLocalSearchParams(); // ✅ Like req.params
   const router = useRouter();
-  const [loading, setLoading] = useState(true);
-  const [progress, setProgress] = useState(0);
+
+  const uri = decodeURIComponent(params.uri || '');
+  const title = params.title || 'PDF Viewer';
+
+  const source = { uri, cache: true };
+
+  const handleDelete = async () => {
+    try {
+      await FileSystem.deleteAsync(uri, { idempotent: true });
+      Alert.alert('Deleted', 'PDF has been deleted.');
+      router.back();
+    } catch (error) {
+      console.error('Delete failed:', error);
+      Alert.alert('Error', 'Failed to delete the file.');
+    }
+  };
 
   return (
     <View style={styles.container}>
       {/* Header */}
-      <View style={styles.header}>
-        <TouchableOpacity onPress={() => router.back()}>
-          <Ionicons name="arrow-back" size={24} color="#fff" />
+      <View style={styles.topBar}>
+        <TouchableOpacity onPress={() => router.back()} style={styles.backBtn}>
+          <Ionicons name="arrow-back" size={24} color="#333" />
+          <Text style={styles.backText}>Back</Text>
         </TouchableOpacity>
-        <Text style={styles.headerTitle} numberOfLines={1}>{title || "PDF Viewer"}</Text>
-        <View style={{ width: 24 }} /> {/* Placeholder for symmetry */}
+        <Text numberOfLines={1} style={styles.title}>{title}</Text>
       </View>
 
-      {/* PDF Viewer */}
-      <View style={styles.pdfContainer}>
-        {loading && (
-          <View style={styles.loadingOverlay}>
-            <Progress.Bar progress={progress} width={200} />
-            <Text style={styles.loadingText}>Loading PDF...</Text>
-          </View>
-        )}
-        <Pdf
-          source={{ uri }}
-          onLoadProgress={(p) => setProgress(p)}
-          onLoadComplete={() => setLoading(false)}
-          onError={(error) => {
-            console.error(error);
-            setLoading(false);
-          }}
-          style={styles.pdf}
-          trustAllCerts={true}
-          spacing={8}
-        />
+      {/* PDF View */}
+      <Pdf
+        source={source}
+        style={styles.pdf}
+        onLoadComplete={(pages) => console.log(`Loaded PDF with ${pages} pages`)}
+        onError={(error) => {
+          console.log('PDF load error:', error);
+          Alert.alert('Error', 'Unable to load PDF');
+        }}
+      />
+
+      {/* Footer */}
+      <View style={styles.footer}>
+        <TouchableOpacity style={styles.deleteButton} onPress={handleDelete}>
+          <Ionicons name="trash-outline" size={20} color="#fff" />
+          <Text style={styles.buttonText}>Delete PDF</Text>
+        </TouchableOpacity>
       </View>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#fff',
-    paddingTop: Platform.OS === 'android' ? 30 : 0,
-  },
-  header: {
-    height: 56,
-    backgroundColor: '#6b28ad',
+  container: { flex: 1, backgroundColor: '#f9f9f9' },
+
+  topBar: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: 16,
-    justifyContent: 'space-between',
+    paddingHorizontal: 12,
+    paddingTop: 50,
+    paddingBottom: 12,
+    backgroundColor: '#fff',
+    elevation: 3,
   },
-  headerTitle: {
-    color: '#fff',
-    fontSize: 18,
+  backBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginRight: 12,
+  },
+  backText: {
+    fontSize: 16,
+    marginLeft: 6,
+    color: '#333',
+  },
+  title: {
+    fontSize: 16,
     fontWeight: 'bold',
-    flex: 1,
-    textAlign: 'center',
-    marginHorizontal: 8,
+    flexShrink: 1,
   },
-  pdfContainer: {
-    flex: 1,
-  },
+
   pdf: {
     flex: 1,
     width: '100%',
+    backgroundColor: '#fff',
   },
-  loadingOverlay: {
-    position: 'absolute',
-    top: '45%',
+
+  footer: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    padding: 12,
+    backgroundColor: '#fff',
+    borderTopWidth: 1,
+    borderColor: '#eee',
+  },
+  deleteButton: {
+    backgroundColor: '#d9534f',
+    flexDirection: 'row',
     alignItems: 'center',
-    alignSelf: 'center',
-    zIndex: 1,
+    paddingVertical: 10,
+    paddingHorizontal: 16,
+    borderRadius: 8,
   },
-  loadingText: {
-    marginTop: 8,
-    color: '#444',
+  buttonText: {
+    color: '#fff',
+    marginLeft: 6,
+    fontWeight: 'bold',
   },
 });

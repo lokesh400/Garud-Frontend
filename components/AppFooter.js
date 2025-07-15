@@ -6,7 +6,7 @@ export default function AppFooter() {
 
   return (
     <View style={styles.footer}>
-      <TouchableOpacity onPress={() => router.push("/home")} style={styles.navItem}>
+      <TouchableOpacity onPress={() => router.push("/dashboard")} style={styles.navItem}>
         <Image source={require("../assets/images/icon.png")} style={styles.icon} />
         <Text style={styles.label}>Home</Text>
       </TouchableOpacity>
@@ -19,6 +19,16 @@ export default function AppFooter() {
       <TouchableOpacity onPress={() => router.push("/profile")} style={styles.navItem}>
         <Image source={require("../assets/images/icon.png")} style={styles.icon} />
         <Text style={styles.label}>Profile</Text>
+      </TouchableOpacity>
+
+      <TouchableOpacity onPress={() => router.push("/questions")} style={styles.navItem}>
+        <Image source={require("../assets/images/icon.png")} style={styles.icon} />
+        <Text style={styles.label}>QOTD</Text>
+      </TouchableOpacity>
+
+      <TouchableOpacity onPress={() => router.push("/leaderboard")} style={styles.navItem}>
+        <Image source={require("../assets/images/icon.png")} style={styles.icon} />
+        <Text style={styles.label}>leaderboard</Text>
       </TouchableOpacity>
     </View>
   );

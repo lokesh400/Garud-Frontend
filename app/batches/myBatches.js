@@ -13,10 +13,9 @@ import {
   Platform,
   TextInput,
 } from "react-native";
-import { apiFetch,API_BASE } from "../../utils/api";
+import { apiFetch } from "../../utils/api";
 import { Ionicons } from '@expo/vector-icons';
 import AppFooter from "../../components/AppFooter";
-import { Linking } from 'react-native';
 
 export default function Batches() {
   const [batches, setBatches] = useState([]);
@@ -50,46 +49,42 @@ export default function Batches() {
 
   if (loading) {
     return (
-      <View style={styles.loadingContainer}>
+      <SafeAreaView style={styles.loadingContainer}>
         <ActivityIndicator size="large" />
-      </View>
+      </SafeAreaView>
     );
   }
 
   return (
-    <View style={styles.container}>
+    <SafeAreaView style={styles.safeContainer}>
       <StatusBar barStyle="dark-content" />
-      
-      {/* Custom Header */}
-      <SafeAreaView style={styles.headerSafeArea}>
-        <View style={styles.header}>
-          <Text style={styles.headerTitle}>My Batches</Text>
-          
-          {/* Search Bar */}
-          <View style={styles.searchContainer}>
-            <Ionicons name="search" size={20} color="#999" style={styles.searchIcon} />
-            <TextInput
-              style={styles.searchInput}
-              placeholder="Search batches..."
-              placeholderTextColor="#999"
-              value={searchQuery}
-              onChangeText={setSearchQuery}
-            />
-            {searchQuery.length > 0 && (
-              <TouchableOpacity onPress={() => setSearchQuery("")} style={styles.clearButton}>
-                <Ionicons name="close-circle" size={20} color="#999" />
-              </TouchableOpacity>
-            )}
-          </View>
+
+      {/* Header */}
+      <View style={styles.header}>
+        <Text style={styles.headerTitle}>My Batches</Text>
+
+        <View style={styles.searchContainer}>
+          <Ionicons name="search" size={20} color="#999" style={styles.searchIcon} />
+          <TextInput
+            style={styles.searchInput}
+            placeholder="Search batches..."
+            placeholderTextColor="#999"
+            value={searchQuery}
+            onChangeText={setSearchQuery}
+          />
+          {searchQuery.length > 0 && (
+            <TouchableOpacity onPress={() => setSearchQuery("")} style={styles.clearButton}>
+              <Ionicons name="close-circle" size={20} color="#999" />
+            </TouchableOpacity>
+          )}
         </View>
-      </SafeAreaView>
-      
-      {/* Content Area */}
+      </View>
+
+      {/* Content */}
       <FlatList
         data={filteredBatches}
         keyExtractor={(item) => item._id}
         contentContainerStyle={styles.listContent}
-        style={styles.list}
         renderItem={({ item }) => (
           <View style={styles.card}>
             <Text style={styles.title}>{item.title}</Text>
@@ -102,13 +97,13 @@ export default function Batches() {
               <Text style={styles.infoText}>Starts: {item.startingDate}</Text>
               <Text style={styles.infoText}>Class: {item.class}</Text>
             </View>
-            <View style={{borderColor:"black",borderWidth:0.4,marginBottom:20}} ></View>
+            <View style={{ borderColor: "black", borderWidth: 0.4, marginBottom: 20 }} />
             <View style={styles.buttonsContainer}>
               <TouchableOpacity
                 style={[styles.button, styles.secondaryButton]}
                 onPress={() => router.push(`/batches/${item._id}`)}
               >
-                <Text style={styles.buttonText}>Study</Text>
+                <Text style={[styles.buttonText, { color: '#6b28ad' }]}>Study</Text>
               </TouchableOpacity>
             </View>
           </View>
@@ -120,32 +115,34 @@ export default function Batches() {
           </View>
         }
       />
-      
+
       <AppFooter />
-    </View>
+    </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
+  safeContainer: {
     flex: 1,
-    backgroundColor: '#ffff',
-    paddingBottom: 60, // Add padding to prevent content from being hidden behind footer
+    backgroundColor: '#fff',
   },
-  headerSafeArea: {
-    backgroundColor: '#ffffff',
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: '#fff',
   },
   header: {
     paddingHorizontal: 16,
     paddingVertical: 16,
     borderBottomWidth: 1,
     borderBottomColor: '#e0e0e0',
+    backgroundColor: '#fff',
   },
   headerTitle: {
     fontSize: 24,
     fontWeight: 'bold',
     color: '#333',
-    marginTop: Platform.OS === 'android' ? StatusBar.currentHeight : 0,
   },
   searchContainer: {
     flexDirection: 'row',
@@ -167,19 +164,10 @@ const styles = StyleSheet.create({
   clearButton: {
     marginLeft: 10,
   },
-  list: {
-    flex: 1,
-  },
   listContent: {
     paddingHorizontal: 16,
-    paddingBottom: 24,
+    paddingBottom: 80,
     paddingTop: 16,
-  },
-  loadingContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: '#f8f9fa',
   },
   card: {
     backgroundColor: '#ffffff',
@@ -225,19 +213,14 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  primaryButton: {
-    backgroundColor: '#6b28ad',
-  },
   secondaryButton: {
     backgroundColor: '#e0d6eb',
   },
   buttonText: {
-    color: '#fff',
     fontWeight: '600',
     fontSize: 15,
   },
   emptyContainer: {
-    flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
     paddingVertical: 50,

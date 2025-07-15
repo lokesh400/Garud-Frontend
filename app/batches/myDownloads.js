@@ -5,63 +5,73 @@ import {
   ScrollView,
   TouchableOpacity,
   StyleSheet,
-  ActivityIndicator
+  ActivityIndicator,
 } from 'react-native';
-import { useRouter } from 'expo-router';
 import * as FileSystem from 'expo-file-system';
+import { useRouter } from 'expo-router';
 
 export default function MyDownloads() {
   const [groupedDownloads, setGroupedDownloads] = useState({});
   const [loading, setLoading] = useState(true);
   const router = useRouter();
 
-  // Extract batch ID from filename using regex
   const extractBatchId = (filename) => {
-    const match = filename.match(/\(([^)]+)\)$/);
+    const match = filename.match(/\(([^)]+)\)/); // capture inside parentheses
     return match ? match[1] : 'unknown';
   };
 
   const extractTitle = (filename) => {
-    const match = filename.match(/\/([^/]+)\(/);
-    return match ? match[1] : filename;
+    return filename
+      .replace(/\.pdf(\(.*\))?$/, '') // remove ".pdf" and optional "(...)"
+      .replace(/_/g, ' ') // replace underscores with spaces
+      .trim();
   };
 
   useEffect(() => {
     const loadDownloads = async () => {
+      const directories = [FileSystem.documentDirectory, FileSystem.cacheDirectory];
+      let allFiles = [];
+
       try {
-        const files = await FileSystem.readDirectoryAsync(
-          FileSystem.documentDirectory || FileSystem.cacheDirectory
-        );
+        for (const dir of directories) {
+          if (!dir) continue;
 
-        const fullFiles = await Promise.all(
-          files.map(async (filename) => {
-            const uri = `${FileSystem.documentDirectory}${filename}`;
-            const info = await FileSystem.getInfoAsync(uri);
-            if (!info.exists || !filename.endsWith('.pdf')) return null;
+          const files = await FileSystem.readDirectoryAsync(dir);
+          console.log(`Reading from: ${dir}`, files);
 
-            const batchId = extractBatchId(filename);
-            const title = extractTitle(filename);
+          const fileDetails = await Promise.all(
+            files.map(async (filename) => {
+              if (!filename.match(/\.pdf(\([^)]+\))?$/)) return null; // fix: allow .pdf(...)
 
-            return {
-              uri,
-              title,
-              batchId,
-              date: info.modificationTime || Date.now(),
-            };
-          })
-        );
+              const uri = dir + filename;
+              const info = await FileSystem.getInfoAsync(uri);
+              if (!info.exists) return null;
 
-        const validFiles = fullFiles.filter(Boolean);
+              return {
+                uri,
+                title: extractTitle(filename),
+                batchId: extractBatchId(filename),
+                date: info.modificationTime || Date.now(),
+              };
+            })
+          );
 
+          allFiles.push(...fileDetails.filter(Boolean));
+        }
+
+        // Sort newest first
+        allFiles.sort((a, b) => b.date - a.date);
+
+        // Group by batchId
         const grouped = {};
-        for (const file of validFiles) {
+        for (const file of allFiles) {
           if (!grouped[file.batchId]) grouped[file.batchId] = [];
           grouped[file.batchId].push(file);
         }
 
         setGroupedDownloads(grouped);
-      } catch (error) {
-        console.error("Error reading downloads:", error);
+      } catch (err) {
+        console.error('Failed to load files:', err);
       } finally {
         setLoading(false);
       }
@@ -88,22 +98,23 @@ export default function MyDownloads() {
         Object.entries(groupedDownloads).map(([batchId, files]) => (
           <View key={batchId} style={styles.batchSection}>
             <Text style={styles.batchTitle}>Batch ID: {batchId}</Text>
-            {files.map((item, index) => (
+            {files.map((file, index) => (
               <TouchableOpacity
                 key={index}
                 style={styles.downloadItem}
                 onPress={() =>
                   router.push({
                     pathname: '/pdfviewer',
-                    params: { 
-                      uri: item.uri,
-                      title: item.title },
+                    params: {
+                      uri: file.uri,
+                      title: file.title,
+                    },
                   })
                 }
               >
-                <Text style={styles.downloadTitle}>{item.title}</Text>
+                <Text style={styles.downloadTitle}>{file.title}</Text>
                 <Text style={styles.downloadDate}>
-                  {new Date(item.date).toLocaleDateString()}
+                  {new Date(file.date).toLocaleDateString()}
                 </Text>
               </TouchableOpacity>
             ))}
